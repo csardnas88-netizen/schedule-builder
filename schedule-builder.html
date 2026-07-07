@@ -402,6 +402,22 @@ body {
 .sc-special { background: #F9EBEA; color: #7B241C; }
 .sc-vac     { background: #DCE3EC; color: #3B4A63; }
 
+/* ── LIBRETA CONFLICT ALERTS ── */
+.libreta-alerts { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.libreta-alerts:empty { display: none; }
+.lib-alert {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 11px; border-radius: 8px;
+  font-size: 12px; line-height: 1.35; font-weight: 600;
+  border: 1px solid transparent;
+}
+.lib-alert .lib-ico { font-size: 13px; line-height: 1.2; flex-shrink: 0; }
+.lib-alert .lib-body { flex: 1; }
+.lib-alert .lib-body b { font-weight: 800; }
+.lib-alert .lib-body .lib-sub { display: block; font-weight: 500; opacity: 0.85; margin-top: 1px; }
+.lib-alert.conflict { background: var(--red-pale); color: var(--red); border-color: #E6B0AA; }
+.lib-alert.warn     { background: var(--orange-pale); color: var(--orange); border-color: #F5D8A0; }
+
 /* ── COUNTER FOOTER (sticky bottom of table) ── */
 .counts-row td {
   background: var(--navy);
@@ -697,6 +713,7 @@ body {
     </div>
     <button class="btn btn-navy" onclick="addRequest()">＋ Agregar</button>
   </div>
+  <div class="libreta-alerts" id="libreta-alerts"></div>
   <div class="req-list" id="req-list"></div>
 </div>
 
@@ -1191,6 +1208,8 @@ function renderScheduleTable() {
 
   html += '</tbody>';
   table.innerHTML = html;
+
+  renderLibretaAlerts();
 }
 
 function esc(s) { return s.replace(/'/g, "\\'"); }
@@ -1259,6 +1278,94 @@ function empById(id) {
     if (e) return { ...e, dept: d.label };
   }
   return null;
+}
+
+// ═══════════════════════════════════════════
+//  PHASE 2 · LIBRETA CONFLICT ALERTS
+// ═══════════════════════════════════════════
+
+// Same physical person occupying two roster rows (home + cover slot).
+// A person is "off" if ANY of their alias rows is marked off.
+const ID_ALIASES = {
+  ra_gabriela_c: ['lby_gabriela'], lby_gabriela: ['ra_gabriela_c'],
+  td_andrea:     ['lby_andrea'],   lby_andrea:   ['td_andrea'],
+  hp_jorge_g:    ['lnd_jorge'],    lnd_jorge:    ['hp_jorge_g'],
+};
+function aliasesFor(id) { return [id, ...(ID_ALIASES[id] || [])]; }
+
+// Rule A · cover cascades: if EVERY listed person is off the same day,
+// the critical position has nobody left to cover it.
+const COVER_CASCADES = [
+  { position: 'Lobby AM',         members: ['lby_maria_m', 'ra_gabriela_c'] },
+  { position: 'Lobby PM',         members: ['lby_sarahi', 'td_andrea'] },
+  { position: 'Washer / Laundry', members: ['lnd_victoriano', 'hp_jorge_g'] },
+  { position: 'Houseman PM',      members: ['td_yesenia_p', 'td_paty_c', 'td_yorlin_a'] },
+  { position: 'Overnight',        members: ['ovn_melvin', 'ovn_luis'] },
+];
+
+// Rule B · minimum bodies available each day for these small teams.
+const MIN_STAFF = { supervisors: 2, houseperson: 2, laundry: 3 };
+
+function isOffDay(empId, dayIdx) {
+  if (isOnVacation(empId, dayIdx)) return true;
+  const s = state.schedule[`${empId}_${dayIdx}`];
+  return s === 'OFF' || s === 'R-OFF' || s === 'VAC';
+}
+function personOff(empId, dayIdx) {
+  return aliasesFor(empId).some(id => isOffDay(id, dayIdx));
+}
+function empName(id) { const e = empById(id); return e ? e.name : id; }
+
+function buildLibretaAlerts() {
+  const alerts = [];
+  const days = getDayDates();
+
+  // ── Rule A · cover-cascade conflicts ──
+  COVER_CASCADES.forEach(c => {
+    const hitDays = [];
+    days.forEach((d, i) => {
+      if (c.members.every(m => personOff(m, i))) hitDays.push(d.short);
+    });
+    if (hitDays.length) {
+      alerts.push({
+        level: 'conflict',
+        title: `${c.position} sin cobertura`,
+        sub: `${c.members.map(empName).join(', ')} libres el mismo día · ${hitDays.join(', ')}`,
+      });
+    }
+  });
+
+  // ── Rule B · small-team minimums ──
+  Object.entries(MIN_STAFF).forEach(([deptId, min]) => {
+    const dept = DEPARTMENTS.find(d => d.id === deptId);
+    if (!dept) return;
+    const low = [];
+    days.forEach((d, i) => {
+      const avail = dept.members.filter(m => !personOff(m.id, i)).length;
+      if (avail < min) low.push(`${d.short}: ${avail}`);
+    });
+    if (low.length) {
+      alerts.push({
+        level: 'warn',
+        title: `${dept.label} bajo el mínimo (${min})`,
+        sub: `Disponibles — ${low.join(' · ')}`,
+      });
+    }
+  });
+
+  return alerts;
+}
+
+function renderLibretaAlerts() {
+  const box = document.getElementById('libreta-alerts');
+  if (!box) return;
+  const alerts = buildLibretaAlerts();
+  box.innerHTML = alerts.map(a => `
+    <div class="lib-alert ${a.level}">
+      <span class="lib-ico">${a.level === 'conflict' ? '⛔' : '⚠'}</span>
+      <span class="lib-body"><b>${a.title}</b><span class="lib-sub">${a.sub}</span></span>
+    </div>
+  `).join('');
 }
 
 function renderReqForm() {
