@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule Builder — JW Marriott HOU</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --cream:       #F6F1E9;
+  --cream-dark:  #E8DFCE;
+  --navy:        #1B2B4B;
+  --navy-mid:    #243660;
+  --navy-light:  #2C4270;
+  --gold:        #C4972A;
+  --gold-light:  #E8C96B;
+  --gold-pale:   #FAF3DC;
+  --text:        #1E1E1E;
+  --muted:       #6B6B6B;
+  --white:       #FFFFFF;
+  --red:         #B03A2E;
+  --red-pale:    #FDEDEC;
+  --green:       #1E8449;
+  --green-pale:  #EAFAF1;
+  --orange:      #CA6F1E;
+  --orange-pale: #FEF9E7;
+  --border:      #DDD5C4;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* ── HEADER ── */
+.app-header {
+  background: var(--navy);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+.app-header-left h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.3px;
+}
+.app-header-left p {
+  font-size: 11px;
+  color: var(--gold-light);
+  margin-top: 1px;
+}
+.header-actions { display: flex; gap: 8px; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-gold  { background: var(--gold); color: var(--white); }
+.btn-gold:hover  { background: #B08622; }
+.btn-ghost { background: transparent; color: var(--gold-light); border: 1.5px solid rgba(228,201,107,0.35); }
+.btn-ghost:hover { border-color: var(--gold-light); }
+.btn-danger { background: var(--red); color: var(--white); }
+.btn-danger:hover { background: #922B21; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--white);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  margin: 16px;
+}
+.card-header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.card-header span {
+  font-size: 11px;
+  color: var(--gold-light);
+}
+
+/* ── WEEK SETUP ── */
+.week-setup {
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.field input[type="date"] {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: var(--cream);
+  color: var(--text);
+  outline: none;
+}
+.field input[type="date"]:focus { border-color: var(--gold); }
+
+/* ── LIBRETA DE REQUESTS ── */
+.req-form {
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.req-form select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: var(--cream);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+.req-form select:focus { border-color: var(--gold); }
+.btn-navy { background: var(--navy); color: var(--white); }
+.btn-navy:hover { background: var(--navy-mid); }
+.day-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.day-chip {
+  padding: 7px 11px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--muted);
+  background: var(--white);
+  transition: all 0.12s;
+  user-select: none;
+}
+.day-chip:hover { border-color: var(--gold); }
+.day-chip.active {
+  background: var(--gold);
+  color: var(--white);
+  border-color: var(--gold);
+}
+.req-list {
+  border-top: 1px solid var(--cream-dark);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.req-empty {
+  padding: 18px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.req-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--cream-dark);
+}
+.req-item:last-child { border-bottom: none; }
+.req-item-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+.req-item-dept { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.req-item-days { display: flex; gap: 4px; flex-wrap: wrap; }
+.req-day-tag {
+  background: var(--gold-pale);
+  color: #8B6914;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+.req-del {
+  border: none;
+  background: transparent;
+  color: var(--red);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.req-del:hover { background: var(--red-pale); }
+
+/* ── ROOMS ROW ── */
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--cream-dark);
+}
+.rooms-cell {
+  padding: 10px 8px;
+  border-right: 1px solid var(--cream-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rooms-cell:last-child { border-right: none; }
+.rooms-cell label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--navy);
+  text-align: center;
+}
+.rooms-cell input {
+  width: 100%;
+  padding: 6px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--cream);
+  outline: none;
+}
+.rooms-cell input:focus { border-color: var(--gold); background: var(--white); }
+
+/* ── LABOR NEEDS ── */
+.labor-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+.labor-col {
+  padding: 10px 6px;
+  border-right: 1px solid var(--cream-dark);
+}
+.labor-col:last-child { border-right: none; }
+.labor-day-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--navy);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.labor-empty {
+  text-align: center;
+  color: var(--border);
+  font-size: 18px;
+  padding: 8px 0;
+}
+.labor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--cream-dark);
+}
+.labor-row:last-child { border-bottom: none; }
+.labor-pos { color: var(--muted); font-weight: 500; }
+.labor-num { color: var(--navy); font-weight: 700; }
+.labor-num.warn { color: var(--orange); }
+.labor-num.ok   { color: var(--green); }
+
+/* ── SCHEDULE TABLE ── */
+.schedule-wrap { overflow-x: auto; }
+.sched-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+.sched-table thead th {
+  background: var(--navy-mid);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 6px;
+  text-align: center;
+  white-space: nowrap;
+  position: sticky;
+  top: 56px;
+  z-index: 100;
+}
+.sched-table thead th.col-name {
+  text-align: left;
+  padding-left: 14px;
+  min-width: 150px;
+  position: sticky;
+  left: 0;
+  z-index: 101;
+  background: var(--navy);
+}
+.sched-table td.col-name-td {
+  position: sticky;
+  left: 0;
+  background: var(--white);
+  z-index: 50;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 14px;
+  white-space: nowrap;
+  border-right: 2px solid var(--cream-dark);
+  min-width: 150px;
+}
+.dept-header-row td {
+  background: var(--navy-light);
+  color: var(--gold-light);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+}
+.dept-header-row td.col-name-td {
+  background: var(--navy-light) !important;
+  color: var(--gold-light);
+}
+.emp-row td { border-bottom: 1px solid var(--cream-dark); }
+.emp-row:hover td.col-name-td { background: var(--cream) !important; }
+.emp-row:hover td:not(.col-name-td) { background: var(--cream); }
+
+/* ── SHIFT CELLS ── */
+.shift-cell {
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 3px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  transition: transform 0.1s, box-shadow 0.1s;
+  border: 1.5px solid transparent;
+  margin: 2px;
+  user-select: none;
+}
+.shift-cell:active { transform: scale(0.94); }
+.shift-cell:hover  { border-color: var(--gold); box-shadow: 0 2px 6px rgba(196,151,42,0.3); }
+/* Shift color classes */
+.sc-empty   { background: transparent; color: #CCC; border-color: var(--cream-dark); }
+.sc-off     { background: #ECECEC; color: #999; }
+.sc-roff    { background: var(--gold-pale); color: #8B6914; }
+.sc-open    { background: #D5F5E3; color: #1A6636; }
+.sc-close   { background: #D6EAF8; color: #154360; }
+.sc-pm      { background: #EBF5FB; color: #1A5276; }
+.sc-work    { background: #EBF5FB; color: #1B2B4B; }
+.sc-work-late { background: #FDEBD0; color: #784212; }
+.sc-special { background: #F9EBEA; color: #7B241C; }
+
+/* ── COUNTER FOOTER (sticky bottom of table) ── */
+.counts-row td {
+  background: var(--navy);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px 4px;
+  text-align: center;
+  position: sticky;
+  bottom: 0;
+}
+.counts-row td.col-name-td {
+  text-align: left;
+  padding-left: 14px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px;
+  background: var(--navy) !important;
+  color: var(--gold-light);
+  border-right: 2px solid var(--navy-light);
+}
+.count-badge { display: inline-block; }
+.count-ok   { color: var(--gold-light); }
+.count-warn { color: #F0B429; }
+.count-err  { color: #F1948A; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,20,35,0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.modal {
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 440px;
+  padding: 20px 16px 32px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.modal-emp {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.modal-day {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  margin-top: 2px;
+}
+.modal-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.modal-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.modal-opt {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.12s;
+  color: var(--text);
+}
+.modal-opt:hover   { border-color: var(--navy); background: var(--cream); }
+.modal-opt.active  { background: var(--navy); color: var(--white); border-color: var(--navy); }
+.modal-opt.gold    { background: var(--gold); color: var(--white); border-color: var(--gold); }
+.modal-clear {
+  width: 100%;
+  padding: 11px;
+  margin-top: 8px;
+  border: none;
+  background: var(--cream-dark);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.modal-clear:hover { background: var(--border); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 2000;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex; gap: 16px;
+  padding: 8px 16px;
+  background: var(--cream-dark);
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+}
+.stat-item { white-space: nowrap; font-size: 11px; color: var(--muted); }
+.stat-item strong { color: var(--navy); }
+
+@media (max-width: 480px) {
+  .week-setup { gap: 8px; }
+  .card { margin: 10px; }
+  .rooms-cell input { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="app-header-left">
+    <h1>Schedule Builder</h1>
+    <p>JW Marriott Houston Downtown · Housekeeping</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="clearSchedule()">🗑 Limpiar</button>
+    <button class="btn btn-gold" onclick="exportExcel()">⬇ Exportar Excel</button>
+  </div>
+</header>
+
+<!-- WEEK SETUP -->
+<div class="card">
+  <div class="card-header">
+    <h2>Semana</h2>
+    <span id="week-label">—</span>
+  </div>
+  <div class="week-setup">
+    <div class="field">
+      <label>Fecha de inicio (Sábado)</label>
+      <input type="date" id="week-start" onchange="onWeekChange()">
+    </div>
+    <div class="stats-bar" id="total-stats" style="flex:1;border-top:none;padding:0;background:transparent;gap:8px;align-items:center">
+    </div>
+  </div>
+  <div class="rooms-grid" id="rooms-grid"></div>
+</div>
+
+<!-- LIBRETA DE REQUESTS -->
+<div class="card">
+  <div class="card-header">
+    <h2>Libreta de Requests (R-OFF)</h2>
+    <span id="req-count">0 requests</span>
+  </div>
+  <div class="req-form">
+    <div class="field" style="flex:1;min-width:180px">
+      <label>Empleado</label>
+      <select id="req-emp"></select>
+    </div>
+    <div class="field">
+      <label>Días solicitados</label>
+      <div class="day-chips" id="req-days"></div>
+    </div>
+    <button class="btn btn-navy" onclick="addRequest()">＋ Agregar</button>
+  </div>
+  <div class="req-list" id="req-list"></div>
+</div>
+
+<!-- LABOR NEEDS -->
+<div class="card">
+  <div class="card-header">
+    <h2>Necesidades de Labor</h2>
+    <span>Cuartos vendidos × estándares</span>
+  </div>
+  <div class="labor-grid" id="labor-grid"></div>
+</div>
+
+<!-- SCHEDULE -->
+<div class="card">
+  <div class="card-header">
+    <h2>Horario Semanal</h2>
+    <span>Toca una celda para asignar turno</span>
+  </div>
+  <div class="schedule-wrap">
+    <table class="sched-table" id="sched-table"></table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-emp" id="modal-emp-name"></div>
+    <div class="modal-day" id="modal-day-label"></div>
+    <div class="modal-section-label">Selecciona turno</div>
+    <div class="modal-options" id="modal-opts"></div>
+    <button class="modal-clear" onclick="selectShift('')">✕ Limpiar celda</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════
+
+const DAYS = ['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'];
+
+const LABOR = {
+  ra:       { label: 'Room Att.',  pct: 0.562 },
+  ha:       { label: 'Housepers.', pct: 0.175 },
+  sup:      { label: 'Supervisor', pct: 0.155 },
+  laundry:  { label: 'Laundry',    pct: 0.18  },
+  turndown: { label: 'Turndown',   fixed: 21  },
+  pubarea:  { label: 'Pub. Area',  fixed: 32  },
+};
+
+// Shift definitions per department
+// format: { label, exportLabel, cls }
+const DEPT_SHIFTS = {
+  management: [
+    { label:'Open',    exportLabel:'Open',   cls:'sc-open'  },
+    { label:'Close',   exportLabel:'Close',  cls:'sc-close' },
+    { label:'PM',      exportLabel:'PM',     cls:'sc-pm'    },
+    { label:'OFF',     exportLabel:'OFF',    cls:'sc-off'   },
+    { label:'R-OFF',   exportLabel:'R-OFF',  cls:'sc-roff'  },
+  ],
+  supervisors: [
+    { label:'9:30a-6p',  exportLabel:'930a - 6p  INSPECTIONS/F  FLOOR  SUPERVISION',  cls:'sc-work'      },
+    { label:'8:30a-5p',  exportLabel:'830a - 5p  INSPECTIONS/F  FLOOR  SUPERVISION',  cls:'sc-work'      },
+    { label:'PM',        exportLabel:'PM',                                              cls:'sc-pm'        },
+    { label:'LAUNDRY',   exportLabel:'LAUNDRY',                                        cls:'sc-special'   },
+    { label:'OFF',       exportLabel:'OFF',                                             cls:'sc-off'       },
+    { label:'R-OFF',     exportLabel:'R-OFF',                                          cls:'sc-roff'      },
+  ],
+  laundry: [
+    { label:'8:15a-4:45p', exportLabel:'8:15a - 4:45p  LINEN  ATTENDANT', cls:'sc-work' },
+    { label:'8:30a-5p',    exportLabel:'830a - 5p  LINEN  ATTENDANT',     cls:'sc-work' },
+    { label:'OFF',         exportLabel:'OFF',                               cls:'sc-off'  },
+    { label:'R-OFF',       exportLabel:'R-OFF',                            cls:'sc-roff' },
+  ],
+  lobby: [
+    { label:'7a-3:30p',   exportLabel:'7a - 330p  LOBBY  ATTENDANT',     cls:'sc-work'      },
+    { label:'3:30p-10:45p',exportLabel:'3:30p-1045p  LOBBY  ATTENDANT',  cls:'sc-work-late' },
+    { label:'4:30p-10:45p',exportLabel:'4:30p-1045p  LOBBY  ATTENDANT',  cls:'sc-work-late' },
+    { label:'2:30p-10:45p',exportLabel:'2:30p-1045p  LOBBY  ATTENDANT',  cls:'sc-work-late' },
+    { label:'OFF',         exportLabel:'OFF',                              cls:'sc-off'       },
+    { label:'R-OFF',       exportLabel:'R-OFF',                           cls:'sc-roff'      },
+  ],
+  turndown: [
+    { label:'5p-11p RM',   exportLabel:'5p - 11p  RM. & STE.  ATTENDANT', cls:'sc-work-late' },
+    { label:'5p-11p HP',   exportLabel:'5p - 11p  HOUSE  PERSON',          cls:'sc-work-late' },
+    { label:'LOBBY',       exportLabel:'LOBBY',                             cls:'sc-special'   },
+    { label:'OFF',         exportLabel:'OFF',                               cls:'sc-off'       },
+    { label:'R-OFF',       exportLabel:'R-OFF',                            cls:'sc-roff'      },
+  ],
+  overnight: [
+    { label:'10p-6:30a',  exportLabel:'10p - 630a  LOBBY  ATTENDANT', cls:'sc-work-late' },
+    { label:'OFF',         exportLabel:'OFF',                           cls:'sc-off'       },
+    { label:'R-OFF',       exportLabel:'R-OFF',                        cls:'sc-roff'      },
+  ],
+  ra: [
+    { label:'8:15a-4:45p', exportLabel:'815a - 445p  RM. & STE.  ATTENDANT', cls:'sc-work' },
+    { label:'9a-5:30p',    exportLabel:'9a - 530p  RM. & STE.  ATTENDANT',   cls:'sc-work' },
+    { label:'LOBBY',       exportLabel:'LOBBY',                                cls:'sc-special' },
+    { label:'OFF',         exportLabel:'OFF',                                  cls:'sc-off'     },
+    { label:'R-OFF',       exportLabel:'R-OFF',                               cls:'sc-roff'    },
+  ],
+  houseperson: [
+    { label:'8:15a-4:45p', exportLabel:'815a - 445p  HOUSE  PERSON', cls:'sc-work' },
+    { label:'9a-5:30p',    exportLabel:'9a - 530p  HOUSE  PERSON',   cls:'sc-work' },
+    { label:'LAUNDRY',     exportLabel:'LAUNDRY',                     cls:'sc-special' },
+    { label:'OFF',         exportLabel:'OFF',                          cls:'sc-off'    },
+    { label:'R-OFF',       exportLabel:'R-OFF',                       cls:'sc-roff'   },
+  ],
+};
+
+const DEPARTMENTS = [
+  {
+    id: 'management', label: 'Management',
+    members: [
+      {id:'mgr_carlos',  name:'Carlos'},
+      {id:'mgr_manuel',  name:'Manuel'},
+      {id:'mgr_rebeca',  name:'Rebeca'},
+      {id:'mgr_ingrid',  name:'Ingrid'},
+    ]
+  },
+  {
+    id: 'supervisors', label: 'Supervisors',
+    members: [
+      {id:'sup_rolando',  name:'Rolando'},
+      {id:'sup_jose',     name:'Jose Luis'},
+      {id:'sup_rubidia',  name:'Rubidia G'},
+      {id:'sup_maria_t',  name:'Maria T'},
+      {id:'sup_susan_a',  name:'Susan A'},
+      {id:'sup_yanira',   name:'Yanira S'},
+    ]
+  },
+  {
+    id: 'laundry', label: 'Laundry',
+    members: [
+      {id:'lnd_isabel',    name:'Isabel D'},
+      {id:'lnd_olga_a',    name:'Olga A'},
+      {id:'lnd_petronila', name:'Petronila Q'},
+      {id:'lnd_victoriano',name:'Victoriano C'},
+      {id:'lnd_jorge',     name:'Jorge'},
+      {id:'lnd_rubia',     name:'Rubia'},
+      {id:'lnd_olga_yac',  name:'Olga Yac'},
+      {id:'lnd_susan',     name:'Susan'},
+      {id:'lnd_gady',      name:'Gady'},
+      {id:'lnd_adamary',   name:'Adamary'},
+    ]
+  },
+  {
+    id: 'lobby', label: 'Lobby Attendant',
+    members: [
+      {id:'lby_maria_m',   name:'Maria M'},
+      {id:'lby_sarahi',    name:'Sarahi'},
+      {id:'lby_gabriela',  name:'Gabriela'},
+      {id:'lby_andrea',    name:'Andrea'},
+      {id:'lby_yorlin',    name:'Yorlin'},
+      {id:'lby_guadalupe', name:'Guadalupe'},
+    ]
+  },
+  {
+    id: 'turndown', label: 'Turndown Attendant',
+    members: [
+      {id:'td_yorlin_a',     name:'Yorlin A'},
+      {id:'td_aura_b',       name:'Aura B'},
+      {id:'td_guadalupe_c',  name:'Guadalupe C'},
+      {id:'td_paty_c',       name:'Paty C'},
+      {id:'td_yesenia_p',    name:'Yesenia P'},
+      {id:'td_andrea',       name:'Andrea'},
+      {id:'td_jazmin',       name:'Jazmin'},
+    ]
+  },
+  {
+    id: 'overnight', label: 'Overnight Lobby',
+    members: [
+      {id:'ovn_melvin', name:'Melvin'},
+      {id:'ovn_luis',   name:'Luis'},
+    ]
+  },
+  {
+    id: 'ra', label: 'Room Attendant',
+    members: [
+      {id:'ra_claudia_v',     name:'Claudia V'},
+      {id:'ra_evangelina_f',  name:'Evangelina F'},
+      {id:'ra_thelma_r',      name:'Thelma R'},
+      {id:'ra_karla_v',       name:'Karla V'},
+      {id:'ra_rubia_t',       name:'Rubia T'},
+      {id:'ra_aletis_t',      name:'Aletis T'},
+      {id:'ra_sandra_t',      name:'Sandra T'},
+      {id:'ra_maria_n',       name:'Maria N'},
+      {id:'ra_hermelinda_n',  name:'Hermelinda N'},
+      {id:'ra_gabriela_c',    name:'Gabriela C'},
+      {id:'ra_florencia_m',   name:'Florencia M'},
+      {id:'ra_santa_elena_d', name:'Santa Elena D'},
+      {id:'ra_heidy_a',       name:'Heidy A'},
+      {id:'ra_debora_t',      name:'Debora T'},
+      {id:'ra_jazmy_b',       name:'Jazmy B'},
+      {id:'ra_sandy_b',       name:'Sandy B'},
+      {id:'ra_luisa_y',       name:'Luisa Y'},
+      {id:'ra_olga_y',        name:'Olga Y'},
+      {id:'ra_julia_s',       name:'Julia S'},
+      {id:'ra_rosario_p',     name:'Rosario P'},
+      {id:'ra_candy',         name:'Candy'},
+      {id:'ra_sandra_s',      name:'Sandra S'},
+      {id:'ra_abby_rosa',     name:'Abby Rosa'},
+      {id:'ra_maria_ag',      name:'Maria Aguilar'},
+    ]
+  },
+  {
+    id: 'houseperson', label: 'Houseperson',
+    members: [
+      {id:'hp_jorge_g',   name:'Jorge G'},
+      {id:'hp_elmer_g',   name:'Elmer G'},
+      {id:'hp_david_m',   name:'David M'},
+      {id:'hp_vanessa_b', name:'Vanessa B'},
+      {id:'hp_mauricia',  name:'Mauricia'},
+      {id:'hp_rubia',     name:'Rubia'},
+      {id:'hp_julia',     name:'Julia'},
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+
+let state = {
+  weekStart: '',
+  rooms:    [0,0,0,0,0,0,0],
+  schedule: {},   // key: `${empId}_${dayIdx}` → label string
+  requests: [],   // [{empId, days:[0..6]}]
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('jwm_schedule_v1');
+    if (s) state = { ...state, ...JSON.parse(s) };
+  } catch(e) {}
+}
+function saveState() {
+  try { localStorage.setItem('jwm_schedule_v1', JSON.stringify(state)); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+
+function getDayDates() {
+  if (!state.weekStart) return DAYS.map(d => ({ short: d, label: d, serial: '' }));
+  const base = new Date(state.weekStart + 'T12:00:00');
+  return DAYS.map((d, i) => {
+    const dt = new Date(base);
+    dt.setDate(base.getDate() + i);
+    return {
+      short: d,
+      label: `${d} ${dt.getMonth()+1}/${dt.getDate()}`,
+      serial: dt.toLocaleDateString('en-US'),
+    };
+  });
+}
+
+function nextSaturday() {
+  const d = new Date();
+  const dow = d.getDay();          // 0=Sun … 6=Sat
+  const diff = dow === 6 ? 0 : (6 - dow + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+function shiftForDept(deptId, label) {
+  return (DEPT_SHIFTS[deptId] || []).find(s => s.label === label);
+}
+
+function laborCalc(rooms) {
+  const h = (pct, fixed) => fixed != null ? fixed : Math.round(rooms * pct * 10) / 10;
+  const p = (h) => Math.ceil(h / 8);
+  return {
+    ra:       { h: h(0.562), p: p(h(0.562)) },
+    ha:       { h: h(0.175), p: p(h(0.175)) },
+    sup:      { h: h(0.155), p: p(h(0.155)) },
+    laundry:  { h: h(0.18),  p: p(h(0.18))  },
+    turndown: { h: 21, p: p(21) },
+    pubarea:  { h: 32, p: p(32) },
+  };
+}
+
+// Count working staff per day (excludes OFF and R-OFF)
+function countWorking(dayIdx) {
+  const counts = { ra:0, ha:0, sup:0, laundry:0, turndown:0, overnight:0, lobby:0 };
+  DEPARTMENTS.forEach(dept => {
+    dept.members.forEach(emp => {
+      const shift = state.schedule[`${emp.id}_${dayIdx}`] || '';
+      if (!shift || shift === 'OFF' || shift === 'R-OFF') return;
+      if (dept.id === 'ra')          counts.ra++;
+      else if (dept.id === 'houseperson') counts.ha++;
+      else if (dept.id === 'supervisors') counts.sup++;
+      else if (dept.id === 'laundry')     counts.laundry++;
+      else if (dept.id === 'turndown')    counts.turndown++;
+      else if (dept.id === 'overnight')   counts.overnight++;
+      else if (dept.id === 'lobby')       counts.lobby++;
+    });
+  });
+  return counts;
+}
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+
+function render() {
+  renderRoomsGrid();
+  renderLaborGrid();
+  renderScheduleTable();
+  renderReqForm();
+  renderRequests();
+}
+
+function renderRoomsGrid() {
+  const days = getDayDates();
+  document.getElementById('rooms-grid').innerHTML = days.map((d, i) => `
+    <div class="rooms-cell">
+      <label>${d.label}</label>
+      <input type="number" min="0" max="384"
+        value="${state.rooms[i] || ''}"
+        placeholder="—"
+        oninput="onRoomsChange(${i}, this.value)">
+    </div>
+  `).join('');
+}
+
+function renderLaborGrid() {
+  const days = getDayDates();
+  const grid = document.getElementById('labor-grid');
+  grid.innerHTML = days.map((d, i) => {
+    const r = state.rooms[i] || 0;
+    if (!r) return `
+      <div class="labor-col">
+        <div class="labor-day-label">${d.short}</div>
+        <div class="labor-empty">—</div>
+      </div>`;
+    const n = laborCalc(r);
+    const working = countWorking(i);
+    const rows = [
+      { pos: 'RA',  need: n.ra.p,       have: working.ra },
+      { pos: 'HP',  need: n.ha.p,       have: working.ha },
+      { pos: 'Sup', need: n.sup.p,      have: working.sup },
+      { pos: 'Lnd', need: n.laundry.p,  have: working.laundry },
+      { pos: 'TD',  need: n.turndown.p, have: working.turndown },
+    ];
+    return `
+      <div class="labor-col">
+        <div class="labor-day-label">${d.short}</div>
+        ${rows.map(row => {
+          const cls = row.have === 0 ? '' : row.have >= row.need ? 'ok' : 'warn';
+          return `<div class="labor-row">
+            <span class="labor-pos">${row.pos}</span>
+            <span class="labor-num ${cls}">${row.have}/${row.need}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+}
+
+function renderScheduleTable() {
+  const days = getDayDates();
+  const table = document.getElementById('sched-table');
+
+  // Head
+  let html = `<thead><tr>
+    <th class="col-name">Empleado</th>
+    ${days.map(d => `<th>${d.label}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  // Body
+  DEPARTMENTS.forEach(dept => {
+    html += `<tr class="dept-header-row">
+      <td class="col-name-td" colspan="8">${dept.label}</td>
+    </tr>`;
+    dept.members.forEach(emp => {
+      html += `<tr class="emp-row">
+        <td class="col-name-td">${emp.name}</td>
+        ${days.map((d, i) => {
+          const key   = `${emp.id}_${i}`;
+          const label = state.schedule[key] || '';
+          const def   = shiftForDept(dept.id, label);
+          const cls   = def ? def.cls : (label ? 'sc-work' : 'sc-empty');
+          const disp  = label || '·';
+          return `<td><div class="shift-cell ${cls}"
+            onclick="openModal('${emp.id}','${esc(emp.name)}',${i},'${dept.id}')"
+          >${disp}</div></td>`;
+        }).join('')}
+      </tr>`;
+    });
+  });
+
+  // Counts row
+  const working = DAYS.map((_, i) => countWorking(i));
+  html += `<tr class="counts-row">
+    <td class="col-name-td">Total trabajando</td>
+    ${working.map(w => {
+      const total = Object.values(w).reduce((a,b) => a+b, 0);
+      return `<td class="count-badge count-ok">${total}</td>`;
+    }).join('')}
+  </tr>`;
+
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function esc(s) { return s.replace(/'/g, "\\'"); }
+
+// ═══════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════
+
+function onWeekChange() {
+  const val = document.getElementById('week-start').value;
+  if (!val) return;
+
+  // Force Saturday
+  const d = new Date(val + 'T12:00:00');
+  const dow = d.getDay();
+  if (dow !== 6) {
+    const diff = (dow + 1) % 7;
+    d.setDate(d.getDate() - diff);
+    document.getElementById('week-start').value = d.toISOString().split('T')[0];
+  }
+  state.weekStart = document.getElementById('week-start').value;
+
+  // Week label
+  const start = new Date(state.weekStart + 'T12:00:00');
+  const end   = new Date(start); end.setDate(start.getDate() + 6);
+  const fmt   = dt => dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  document.getElementById('week-label').textContent =
+    `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
+
+  saveState();
+  render();
+}
+
+function onRoomsChange(idx, val) {
+  state.rooms[idx] = Math.min(384, Math.max(0, parseInt(val) || 0));
+  saveState();
+  renderLaborGrid();
+}
+
+function clearSchedule() {
+  if (!confirm('¿Limpiar todo el horario y la libreta de requests? (Los cuartos vendidos se mantendrán)')) return;
+  state.schedule = {};
+  state.requests = [];
+  saveState();
+  renderScheduleTable();
+  renderLaborGrid();
+  renderRequests();
+  toast('Horario limpiado');
+}
+
+// ═══════════════════════════════════════════
+//  LIBRETA DE REQUESTS
+// ═══════════════════════════════════════════
+
+let reqSelectedDays = [];
+
+function empById(id) {
+  for (const d of DEPARTMENTS) {
+    const e = d.members.find(m => m.id === id);
+    if (e) return { ...e, dept: d.label };
+  }
+  return null;
+}
+
+function renderReqForm() {
+  // Employee dropdown grouped by department
+  const sel = document.getElementById('req-emp');
+  sel.innerHTML = DEPARTMENTS.map(d => `
+    <optgroup label="${d.label}">
+      ${d.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+    </optgroup>
+  `).join('');
+
+  // Day chips
+  const days = getDayDates();
+  document.getElementById('req-days').innerHTML = days.map((d, i) => `
+    <div class="day-chip ${reqSelectedDays.includes(i) ? 'active' : ''}"
+      onclick="toggleReqDay(${i})">${d.short}</div>
+  `).join('');
+}
+
+function toggleReqDay(i) {
+  const idx = reqSelectedDays.indexOf(i);
+  if (idx >= 0) reqSelectedDays.splice(idx, 1);
+  else reqSelectedDays.push(i);
+  renderReqForm();
+}
+
+function addRequest() {
+  const empId = document.getElementById('req-emp').value;
+  if (!empId) return;
+  if (reqSelectedDays.length === 0) { toast('Selecciona al menos un día'); return; }
+
+  // Merge with existing request for this employee if any
+  let req = state.requests.find(r => r.empId === empId);
+  if (req) {
+    reqSelectedDays.forEach(d => { if (!req.days.includes(d)) req.days.push(d); });
+  } else {
+    req = { empId, days: [...reqSelectedDays] };
+    state.requests.push(req);
+  }
+  req.days.sort((a,b) => a-b);
+
+  // Mark R-OFF in the schedule
+  req.days.forEach(d => { state.schedule[`${empId}_${d}`] = 'R-OFF'; });
+
+  reqSelectedDays = [];
+  saveState();
+  renderReqForm();
+  renderRequests();
+  renderScheduleTable();
+  renderLaborGrid();
+
+  const emp = empById(empId);
+  toast(`R-OFF agregado: ${emp ? emp.name : ''}`);
+}
+
+function removeRequest(empId) {
+  const req = state.requests.find(r => r.empId === empId);
+  if (!req) return;
+  // Clear cells only if still R-OFF (don't erase manual changes)
+  req.days.forEach(d => {
+    const key = `${empId}_${d}`;
+    if (state.schedule[key] === 'R-OFF') delete state.schedule[key];
+  });
+  state.requests = state.requests.filter(r => r.empId !== empId);
+  saveState();
+  renderRequests();
+  renderScheduleTable();
+  renderLaborGrid();
+  toast('Request eliminado');
+}
+
+function renderRequests() {
+  const list  = document.getElementById('req-list');
+  const days  = getDayDates();
+  const count = state.requests.length;
+  document.getElementById('req-count').textContent =
+    count === 1 ? '1 request' : `${count} requests`;
+
+  if (count === 0) {
+    list.innerHTML = `<div class="req-empty">La libreta está vacía — agrega los días que pidieron los empleados</div>`;
+    return;
+  }
+
+  list.innerHTML = state.requests.map(r => {
+    const emp = empById(r.empId);
+    if (!emp) return '';
+    return `<div class="req-item">
+      <div>
+        <div class="req-item-name">${emp.name}</div>
+        <div class="req-item-dept">${emp.dept}</div>
+      </div>
+      <div class="req-item-days">
+        ${r.days.map(d => `<span class="req-day-tag">${days[d].short}</span>`).join('')}
+      </div>
+      <button class="req-del" onclick="removeRequest('${r.empId}')" title="Eliminar">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════
+
+let ctx = null;
+
+function openModal(empId, empName, dayIdx, deptId) {
+  const days = getDayDates();
+  ctx = { empId, dayIdx, key: `${empId}_${dayIdx}`, deptId };
+
+  document.getElementById('modal-emp-name').textContent = empName;
+  document.getElementById('modal-day-label').textContent = days[dayIdx].label;
+
+  const current = state.schedule[ctx.key] || '';
+  const shifts  = DEPT_SHIFTS[deptId] || [];
+
+  document.getElementById('modal-opts').innerHTML = shifts.map(s => `
+    <div class="modal-opt ${s.label === current ? 'active' : ''}"
+      onclick="selectShift('${esc(s.label)}')"
+    >${s.label}</div>
+  `).join('');
+
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function selectShift(label) {
+  if (!ctx) return;
+  if (label === '') {
+    delete state.schedule[ctx.key];
+  } else {
+    state.schedule[ctx.key] = label;
+  }
+  saveState();
+  closeModal();
+  renderScheduleTable();
+  renderLaborGrid();
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  ctx = null;
+}
+
+function onOverlayClick(e) {
+  if (e.target.id === 'modal') closeModal();
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT TO EXCEL
+// ═══════════════════════════════════════════
+
+function exportExcel() {
+  const days = getDayDates();
+  const wb   = XLSX.utils.book_new();
+  const rows = [];
+
+  // Title block
+  rows.push(['','','','','Weekly Schedule']);
+  rows.push(['','','','','JW Marriott Houston']);
+  rows.push([]);
+
+  if (state.weekStart) {
+    const s = new Date(state.weekStart + 'T12:00:00');
+    const e = new Date(s); e.setDate(s.getDate() + 6);
+    const f = d => `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    rows.push(['', `From ${f(s)}-${f(e)}`]);
+  }
+
+  rows.push(['', 'Employee Name', ...days.map(d => d.short)]);
+  rows.push(['', '', ...days.map(d => d.serial)]);
+  rows.push([]);
+
+  DEPARTMENTS.forEach(dept => {
+    rows.push(['', dept.label.toUpperCase()]);
+    dept.members.forEach(emp => {
+      const cells = [];
+      for (let i = 0; i < 7; i++) {
+        const label = state.schedule[`${emp.id}_${i}`] || '';
+        const def   = shiftForDept(dept.id, label);
+        cells.push(def ? def.exportLabel : label);
+      }
+      rows.push(['', emp.name, ...cells]);
+    });
+    rows.push([]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:3}, {wch:22},
+    {wch:50},{wch:50},{wch:50},{wch:50},{wch:50},{wch:50},{wch:50},
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
+
+  const fname = state.weekStart
+    ? `Schedule_${state.weekStart.replace(/-/g,'_')}.xlsx`
+    : 'Schedule.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast(`Exportado: ${fname}`);
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+
+function init() {
+  loadState();
+  if (!state.weekStart) state.weekStart = nextSaturday();
+
+  const input = document.getElementById('week-start');
+  input.value = state.weekStart;
+
+  const start = new Date(state.weekStart + 'T12:00:00');
+  const end   = new Date(start); end.setDate(start.getDate() + 6);
+  const fmt   = dt => dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  document.getElementById('week-label').textContent =
+    `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
