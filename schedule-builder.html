@@ -445,6 +445,25 @@ body {
 .count-warn { color: #F0B429; }
 .count-err  { color: #F1948A; }
 
+/* ── DEPT WORKLOAD CONTEXT ROWS (carga por persona / turndowns) ── */
+.sc-context-row td {
+  background: #FBF7EC;
+  color: #8A7439;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--cream-dark);
+}
+.sc-context-row td.col-name-td {
+  background: #FBF7EC !important;
+  color: #8A7439;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  text-align: left;
+}
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -1255,6 +1274,28 @@ function renderLaborGrid() {
   }).join('');
 }
 
+// Per-day workload context shown under the RA / Supervisors / Houseperson
+// headers. "Carga" = rooms that day ÷ people actually working that day (from the
+// precomputed `working` counts). Turndowns (RA only) = occupied rooms that day.
+function deptContextRows(deptId, working) {
+  const carga = (i, key) => {
+    const w = working[i][key], r = state.rooms[i] || 0;
+    return (!r || !w) ? '·' : Math.round(r / w);
+  };
+  const cells = vals => vals.map(v => `<td>${v}</td>`).join('');
+  const row = (label, vals) =>
+    `<tr class="sc-context-row"><td class="col-name-td">${label}</td>${cells(vals)}</tr>`;
+  const days = [0, 1, 2, 3, 4, 5, 6];
+  if (deptId === 'ra')
+    return row('Cuartos / RA', days.map(i => carga(i, 'ra')))
+         + row('Turndowns', days.map(i => state.rooms[i] || '·'));
+  if (deptId === 'supervisors')
+    return row('Cuartos / Supervisor', days.map(i => carga(i, 'sup')));
+  if (deptId === 'houseperson')
+    return row('Cuartos / Houseman', days.map(i => carga(i, 'ha')));
+  return '';
+}
+
 function renderScheduleTable() {
   const days = getDayDates();
   const table = document.getElementById('sched-table');
@@ -1266,10 +1307,12 @@ function renderScheduleTable() {
   </tr></thead><tbody>`;
 
   // Body
+  const working = days.map((_, i) => countWorking(i));
   DEPARTMENTS.forEach(dept => {
     html += `<tr class="dept-header-row">
       <td class="col-name-td" colspan="8">${dept.label}</td>
     </tr>`;
+    html += deptContextRows(dept.id, working);
     dept.members.forEach(emp => {
       html += `<tr class="emp-row">
         <td class="col-name-td"><div class="name-cell">
@@ -1294,7 +1337,6 @@ function renderScheduleTable() {
   });
 
   // Counts row
-  const working = DAYS.map((_, i) => countWorking(i));
   html += `<tr class="counts-row">
     <td class="col-name-td">Total trabajando</td>
     ${working.map(w => {
@@ -1663,6 +1705,71 @@ function applyHpOverflow() {
   }
 }
 
+// Low-season / seniority trim. LAST pass: for each participating department and
+// day, if more people are working than the day needs, send the surplus home as
+// a normal OFF. Who gets cut rotates week-to-week (lowSeasonHistory); ties break
+// by LEAST seniority (most recent hire cut first; no hire date = protected).
+// Excludes management/overnight/lobby/turndown (fixed pairs or fragile covers)
+// and every alias person (their two rows are driven by the cover cascade).
+function applyLowSeason() {
+  const needs = computeNeeds();
+  const week = state.weekStart;
+  state.lowSeasonHistory[week] = {};        // fresh for this generation
+  const thisWeek = state.lowSeasonHistory[week];
+
+  const priorCount = id => {                // cuts absorbed in OTHER weeks
+    let n = 0;
+    for (const w in state.lowSeasonHistory) {
+      if (w === week) continue;
+      const rec = state.lowSeasonHistory[w];
+      if (rec && rec[id]) n += rec[id];
+    }
+    return n;
+  };
+  const hireDate = id => state.seniority[id] || null;
+
+  const SPECS = [
+    { deptId: 'supervisors', countKey: 'sup',     need: needs.sup },
+    { deptId: 'laundry',     countKey: 'laundry', need: needs.laundry },
+    { deptId: 'ra',          countKey: 'ra',      need: needs.ra },
+    { deptId: 'houseperson', countKey: 'ha',      need: needs.hp },
+  ];
+
+  for (let i = 0; i < 7; i++) {
+    SPECS.forEach(spec => {
+      let need = spec.need[i];
+      if (need === 'ALL') need = deptSize(spec.deptId);
+      need = need || 0;
+      const surplus = countWorking(i)[spec.countKey] - need;
+      if (surplus <= 0) return;
+
+      const pool = deptMemberIds(spec.deptId, ALIAS_IDS).filter(id => {
+        if (isOffCell(id, i)) return false;                 // already off
+        if (state.hpBackup[`${id}_${i}`]) return false;     // RA lent to HP: keep
+        const s = state.schedule[`${id}_${i}`] || '';
+        return s && !s.startsWith('→');                     // must be a real working shift
+      });
+
+      pool.sort((a, b) => {
+        const ca = priorCount(a) + (thisWeek[a] || 0);
+        const cb = priorCount(b) + (thisWeek[b] || 0);
+        if (ca !== cb) return ca - cb;                      // fewest prior cuts → cut first
+        const da = hireDate(a), db = hireDate(b);
+        if (da && db) return da < db ? 1 : da > db ? -1 : 0;// later hire (junior) → cut first
+        if (da && !db) return -1;                           // b has no date → protected
+        if (!da && db) return 1;                            // a has no date → protected
+        return a < b ? -1 : 1;
+      });
+
+      for (let k = 0; k < surplus && k < pool.length; k++) {
+        const id = pool[k];
+        state.schedule[`${id}_${i}`] = 'OFF';
+        thisWeek[id] = (thisWeek[id] || 0) + 1;
+      }
+    });
+  }
+}
+
 // Clear every auto-fillable cell (keep granted requests + vacations).
 function clearAutoFillCells() {
   state.hpBackup = {};
@@ -1700,6 +1807,7 @@ function autoFill() {
   applyYesenia();
   applyAliasCascades();
   applyHpOverflow();
+  applyLowSeason();
 
   saveState();
   render();
