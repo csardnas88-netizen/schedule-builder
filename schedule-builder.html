@@ -2084,13 +2084,13 @@ async function exportExcel() {
         cellsData.push({ text: def ? def.exportLabel : label, cls: def ? def.cls : null });
       }
       const row = ws.addRow(['', emp.name, ...cellsData.map(c => c.text)]);
-      row.height = 24;
+      row.height = 34;
       const nameCell = row.getCell(2);
       nameCell.font = { size: 12 };
       nameCell.alignment = { vertical: 'middle', horizontal: 'left' };
       cellsData.forEach((c, i) => {
         const cell = row.getCell(3 + i);
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell.border = cellBorder;
         const colors = CLS_COLORS[c.cls];
         if (colors) {
