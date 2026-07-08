@@ -311,6 +311,7 @@ body {
 .labor-num { color: var(--navy); font-weight: 700; }
 .labor-num.warn { color: var(--orange); }
 .labor-num.ok   { color: var(--green); }
+.labor-flag { color: var(--orange); font-weight: 800; margin-left: 3px; font-size: 9px; cursor: help; vertical-align: 1px; }
 
 /* ── SCHEDULE TABLE ── */
 .schedule-wrap { overflow-x: auto; }
@@ -674,6 +675,7 @@ body {
   </div>
   <div class="header-actions">
     <button class="btn btn-ghost" onclick="openSeniorityModal()">📋 Antigüedad</button>
+    <button class="btn btn-navy" onclick="autoFill()">⚡ Auto-llenar</button>
     <button class="btn btn-ghost" onclick="clearSchedule()">🗑 Limpiar</button>
     <button class="btn btn-gold" onclick="exportExcel()">⬇ Exportar Excel</button>
   </div>
@@ -1002,6 +1004,7 @@ let state = {
   seniority:        {}, // { empId: 'YYYY-MM-DD' } hire date
   lowSeasonHistory: {}, // { weekStart: { empId: true } } who got the extra reduced-day treatment
   weekendHistory:   {}, // { empId: 'YYYY-MM-DD' } last Sat+Sun both off
+  hpBackup:         {}, // { `${empId}_${dayIdx}`: true } RA pulled to houseperson backup
 };
 
 function loadState() {
@@ -1075,6 +1078,90 @@ function laborCalc(rooms) {
   };
 }
 
+// ═══════════════════════════════════════════
+//  PHASE 3 · OPERATIONAL NEEDS FORMULAS
+// ═══════════════════════════════════════════
+
+// RA load-matching. Spec-faithful scoreCombo: reproduces the manager's real
+// counts on 5 of 7 hand-validated days; the ±1 divergences on the rest are an
+// accepted, documented divergence (the formula and that week are genuinely
+// inconsistent — proven by parameter sweep). Do NOT overfit to one week.
+const RA_LOAD_TARGETS = [
+  { rooms: 14, dueouts: 7,  priority: 1 },
+  { rooms: 15, dueouts: 7,  priority: 1 },
+  { rooms: 16, dueouts: 7,  priority: 2 },
+  { rooms: 14, dueouts: 8,  priority: 2 },
+  { rooms: 14, dueouts: 9,  priority: 2 },
+  { rooms: 17, dueouts: 2,  priority: 3 },
+  { rooms: 18, dueouts: 1,  priority: 3 },
+  { rooms: 14, dueouts: 11, priority: 4 },
+];
+const RA_TOLERANCE = 4;    // best-fit score above this → day marked "fuera de estándar"
+const LAUNDRY_FIXED = 5;   // washer + 4 linen attendants
+
+function scoreCombo(roomsPerRA, doPerRA, t) {
+  return Math.abs(roomsPerRA - t.rooms) + Math.abs(doPerRA - t.dueouts) * 1.5;
+}
+
+function raNeeded(rooms, dueouts) {
+  let bestN = 6, bestScore = Infinity;
+  for (let n = 6; n <= 24; n++) {
+    let minT = Infinity;
+    RA_LOAD_TARGETS.forEach(t => {
+      const s = scoreCombo(rooms / n, dueouts / n, t) + t.priority * 0.1;
+      if (s < minT) minT = s;
+    });
+    // Prefer MORE staff on ties (less load each): larger n wins an equal score.
+    if (minT < bestScore - 1e-9 || Math.abs(minT - bestScore) <= 1e-9) {
+      bestScore = minT;
+      bestN = n;
+    }
+  }
+  return { n: bestN, score: bestScore, outOfStandard: bestScore > RA_TOLERANCE };
+}
+
+function supHpNeeded(dueouts) {
+  if (dueouts <= 20)  return 1;
+  if (dueouts <= 70)  return 2;
+  if (dueouts <= 110) return 3;
+  if (dueouts <= 150) return 4;
+  if (dueouts <= 199) return 5;
+  return 'ALL';
+}
+
+function turndownNeeded(rooms) {
+  return Math.ceil(rooms / 48);
+}
+
+function deptSize(id) {
+  const d = DEPARTMENTS.find(x => x.id === id);
+  return d ? d.members.length : 0;
+}
+
+// Per-day operational needs for every position the grid tracks.
+function computeNeeds() {
+  const out = { ra: [], raScore: [], raFlag: [], sup: [], hp: [], td: [], laundry: [] };
+  for (let i = 0; i < 7; i++) {
+    const rooms = state.rooms[i] || 0;
+    const dueouts = state.dueouts[i] || 0;
+    if (!rooms) {
+      out.ra.push(0); out.raScore.push(0); out.raFlag.push(false);
+      out.sup.push(0); out.hp.push(0); out.td.push(0); out.laundry.push(0);
+      continue;
+    }
+    const ra = raNeeded(rooms, dueouts);
+    const sh = supHpNeeded(dueouts);
+    out.ra.push(ra.n);
+    out.raScore.push(ra.score);
+    out.raFlag.push(ra.outOfStandard);
+    out.sup.push(sh);
+    out.hp.push(sh);
+    out.td.push(turndownNeeded(rooms));
+    out.laundry.push(LAUNDRY_FIXED);
+  }
+  return out;
+}
+
 // Count working staff per day (excludes OFF and R-OFF)
 function countWorking(dayIdx) {
   const counts = { ra:0, ha:0, sup:0, laundry:0, turndown:0, overnight:0, lobby:0 };
@@ -1083,6 +1170,8 @@ function countWorking(dayIdx) {
       if (isOnVacation(emp.id, dayIdx)) return;
       const shift = state.schedule[`${emp.id}_${dayIdx}`] || '';
       if (!shift || shift === 'OFF' || shift === 'R-OFF' || shift === 'VAC') return;
+      // RA pulled to houseperson backup (Rubia/Julia) counts toward HP, not RA.
+      if (dept.id === 'ra' && state.hpBackup[`${emp.id}_${dayIdx}`]) { counts.ha++; return; }
       if (dept.id === 'ra')          counts.ra++;
       else if (dept.id === 'houseperson') counts.ha++;
       else if (dept.id === 'supervisors') counts.sup++;
@@ -1129,6 +1218,7 @@ function renderRoomsGrid() {
 function renderLaborGrid() {
   const days = getDayDates();
   const grid = document.getElementById('labor-grid');
+  const needs = computeNeeds();
   grid.innerHTML = days.map((d, i) => {
     const r = state.rooms[i] || 0;
     if (!r) return `
@@ -1136,22 +1226,26 @@ function renderLaborGrid() {
         <div class="labor-day-label">${d.short}</div>
         <div class="labor-empty">—</div>
       </div>`;
-    const n = laborCalc(r);
     const working = countWorking(i);
+    const supHp = needs.sup[i];  // number or 'ALL'
     const rows = [
-      { pos: 'RA',  need: n.ra.p,       have: working.ra },
-      { pos: 'HP',  need: n.ha.p,       have: working.ha },
-      { pos: 'Sup', need: n.sup.p,      have: working.sup },
-      { pos: 'Lnd', need: n.laundry.p,  have: working.laundry },
-      { pos: 'TD',  need: n.turndown.p, have: working.turndown },
+      { pos: 'RA',  need: needs.ra[i],      have: working.ra,       flag: needs.raFlag[i], score: needs.raScore[i] },
+      { pos: 'HP',  need: supHp,            have: working.ha,       deptId: 'houseperson' },
+      { pos: 'Sup', need: supHp,            have: working.sup,      deptId: 'supervisors' },
+      { pos: 'Lnd', need: needs.laundry[i], have: working.laundry },
+      { pos: 'TD',  need: needs.td[i],      have: working.turndown },
     ];
     return `
       <div class="labor-col">
         <div class="labor-day-label">${d.short}</div>
         ${rows.map(row => {
-          const cls = row.have === 0 ? '' : row.have >= row.need ? 'ok' : 'warn';
+          const needNum = row.need === 'ALL' ? deptSize(row.deptId) : row.need;
+          const cls = row.have === 0 ? '' : row.have >= needNum ? 'ok' : 'warn';
+          const flag = row.flag
+            ? `<span class="labor-flag" title="Fuera de estándar · score ${row.score.toFixed(1)}">◆</span>`
+            : '';
           return `<div class="labor-row">
-            <span class="labor-pos">${row.pos}</span>
+            <span class="labor-pos">${row.pos}${flag}</span>
             <span class="labor-num ${cls}">${row.have}/${row.need}</span>
           </div>`;
         }).join('')}
@@ -1366,6 +1460,247 @@ function renderLibretaAlerts() {
       <span class="lib-body"><b>${a.title}</b><span class="lib-sub">${a.sub}</span></span>
     </div>
   `).join('');
+}
+
+// ═══════════════════════════════════════════
+//  PHASE 3 · AUTO-FILL ENGINE
+// ═══════════════════════════════════════════
+
+// People whose primary role lives in one dept but who cover a second slot.
+// Their two roster rows are mutually exclusive on any day (handled in cascade).
+const ALIAS_PEOPLE = [
+  { name:'Gabriela C', primaryId:'ra_gabriela_c', primaryDept:'ra',          coverId:'lby_gabriela', coverShift:'7a-3:30p',      titularId:'lby_maria_m'   },
+  { name:'Andrea',     primaryId:'td_andrea',     primaryDept:'turndown',    coverId:'lby_andrea',   coverShift:'2:30p-10:45p', titularId:'lby_sarahi'    },
+  { name:'Jorge G',    primaryId:'hp_jorge_g',    primaryDept:'houseperson', coverId:'lnd_jorge',    coverShift:'8:15a-4:45p',   titularId:'lnd_victoriano'},
+];
+const ALIAS_IDS = ALIAS_PEOPLE.flatMap(p => [p.primaryId, p.coverId]);
+
+// Overnight defaults when no request: Melvin off Mon+Tue, Luis off Sat+Sun.
+const OVERNIGHT_DEFAULT_OFF = { ovn_melvin: [2, 3], ovn_luis: [0, 1] };
+
+// Standard shift label for a working day, by dept + weekday/weekend.
+const LOBBY_SHIFT = {
+  lby_maria_m: '7a-3:30p',    lby_yorlin:    '7a-3:30p',
+  lby_sarahi:  '2:30p-10:45p', lby_guadalupe: '2:30p-10:45p',
+};
+function standardShift(deptId, id, dayIdx) {
+  const weekend = dayIdx === 0 || dayIdx === 1;   // Sáb, Dom
+  switch (deptId) {
+    case 'supervisors': return weekend ? '9:30a-6p' : '8:30a-5p';
+    case 'ra':          return weekend ? '9a-5:30p' : '8:15a-4:45p';
+    case 'houseperson': return weekend ? '9a-5:30p' : '8:15a-4:45p';
+    case 'laundry':     return '8:15a-4:45p';
+    case 'turndown':    return '5p-11p RM';
+    case 'overnight':   return '10p-6:30a';
+    case 'lobby':       return LOBBY_SHIFT[id] || '7a-3:30p';
+  }
+  return '';
+}
+
+function deptMemberIds(id, exclude) {
+  const d = DEPARTMENTS.find(x => x.id === id);
+  return d ? d.members.map(m => m.id).filter(x => !exclude.includes(x)) : [];
+}
+
+// A day is a fixed off for this person if it's a granted request or vacation.
+function isFixedOff(id, i) {
+  const s = state.schedule[`${id}_${i}`];
+  return s === 'R-OFF' || s === 'VAC' || isOnVacation(id, i);
+}
+function isOffCell(id, i) {
+  const s = state.schedule[`${id}_${i}`];
+  return s === 'OFF' || s === 'R-OFF' || s === 'VAC' || isOnVacation(id, i);
+}
+function writeWork(deptId, id, i) {
+  if (isFixedOff(id, i)) return;   // never overwrite a granted request / vacation
+  state.schedule[`${id}_${i}`] = standardShift(deptId, id, i);
+}
+function writeOff(id, i) {
+  if (isFixedOff(id, i)) return;   // keep R-OFF / VAC label as-is
+  state.schedule[`${id}_${i}`] = 'OFF';
+}
+
+// Give each member `offCount` days off, placing the discretionary ones on the
+// highest-surplus days (working − need). Honors weekendPref; nudges toward
+// consecutive off-days as a tiebreak. Processing members in order staggers them.
+function scheduleDept(deptId, memberIds, need, offCount) {
+  const days = [0,1,2,3,4,5,6];
+  const needNum = i => {
+    const v = Array.isArray(need) ? need[i] : need;
+    return v === 'ALL' ? memberIds.length : (v || 0);
+  };
+  const working = days.map(i => memberIds.filter(id => !isFixedOff(id, i)).length);
+
+  memberIds.forEach(id => {
+    const off = new Set();
+    days.forEach(i => { if (isFixedOff(id, i)) off.add(i); });
+    const pref = (state.preferences[id] || {}).weekendPref || 'indifferent';
+
+    let guard = 0;
+    while (off.size < offCount && guard++ < 20) {
+      let cand = days.filter(i => !off.has(i));
+      if (!cand.length) break;
+      if (pref === 'preferWork') {
+        const nw = cand.filter(i => i !== 0 && i !== 1);
+        if (nw.length) cand = nw;
+      }
+      cand.sort((a, b) => {
+        if (pref === 'preferOff') {
+          const aw = (a === 0 || a === 1) ? 1 : 0, bw = (b === 0 || b === 1) ? 1 : 0;
+          if (aw !== bw) return bw - aw;              // weekend first
+        }
+        const sa = working[a] - needNum(a), sb = working[b] - needNum(b);
+        if (sb !== sa) return sb - sa;                // higher surplus first
+        const adjA = (off.has(a - 1) || off.has(a + 1)) ? 1 : 0;
+        const adjB = (off.has(b - 1) || off.has(b + 1)) ? 1 : 0;
+        if (adjA !== adjB) return adjB - adjA;        // consecutive nudge
+        return a - b;
+      });
+      const pick = cand[0];
+      off.add(pick);
+      working[pick]--;
+    }
+    days.forEach(i => { if (off.has(i)) writeOff(id, i); else writeWork(deptId, id, i); });
+  });
+}
+
+// Overnight is a mutual pair; apply the fixed default off pattern.
+function applyOvernight() {
+  Object.entries(OVERNIGHT_DEFAULT_OFF).forEach(([id, offDays]) => {
+    for (let i = 0; i < 7; i++) {
+      if (isFixedOff(id, i)) continue;
+      state.schedule[`${id}_${i}`] = offDays.includes(i) ? 'OFF' : '10p-6:30a';
+    }
+  });
+}
+
+// Yesenia works 6 days as Houseman PM (1 off); on her off day Paty covers,
+// or Yorlin A if Paty is also off.
+function applyYesenia() {
+  const id = 'td_yesenia_p';
+  const days = [0,1,2,3,4,5,6];
+  let offDay = days.find(i => isFixedOff(id, i));
+  if (offDay === undefined) {
+    const td = computeNeeds().td;
+    // Prefer the lowest-demand day where Paty or Yorlin A can still cover HP.
+    const canCover = i => !isOffCell('td_paty_c', i) || !isOffCell('td_yorlin_a', i);
+    let cand = days.filter(canCover);
+    if (!cand.length) cand = days.slice();
+    offDay = cand.sort((a, b) => td[a] - td[b] || b - a)[0];
+  }
+  days.forEach(i => {
+    if (isFixedOff(id, i)) return;
+    state.schedule[`${id}_${i}`] = (i === offDay) ? 'OFF' : '5p-11p HP';
+  });
+  // Cover the Houseman PM slot on Yesenia's off day.
+  const coverId = isOffCell('td_paty_c', offDay) ? 'td_yorlin_a' : 'td_paty_c';
+  if (!isOffCell(coverId, offDay)) state.schedule[`${coverId}_${offDay}`] = '5p-11p HP';
+}
+
+// Cover cascade for the three alias people. Runs AFTER base departments so the
+// titulars' off days are known. Rule (top-down): own off → OFF; else titular
+// off → cover their slot; else → work primary role.
+function applyAliasCascades() {
+  const days = [0,1,2,3,4,5,6];
+  const needs = computeNeeds();
+  ALIAS_PEOPLE.forEach(p => {
+    const demand = p.primaryDept === 'ra' ? needs.ra
+                 : p.primaryDept === 'turndown' ? needs.td : needs.hp;
+    const titularOff = i => isOffCell(p.titularId, i);
+
+    // Own off days: honor requests/vacation on either row, then add up to 2 on
+    // days the titular works (so covering never collides), lowest primary demand.
+    const off = new Set();
+    days.forEach(i => {
+      const pk = state.schedule[`${p.primaryId}_${i}`], ck = state.schedule[`${p.coverId}_${i}`];
+      if (pk === 'R-OFF' || ck === 'R-OFF' || isOnVacation(p.primaryId, i) || isOnVacation(p.coverId, i)) off.add(i);
+    });
+    let guard = 0;
+    while (off.size < 2 && guard++ < 20) {
+      let cand = days.filter(i => !off.has(i) && !titularOff(i));
+      if (!cand.length) cand = days.filter(i => !off.has(i));
+      if (!cand.length) break;
+      cand.sort((a, b) => (demand[a] || 0) - (demand[b] || 0) || b - a);
+      off.add(cand[0]);
+    }
+
+    days.forEach(i => {
+      const pk = `${p.primaryId}_${i}`, ck = `${p.coverId}_${i}`;
+      const reqOff = state.schedule[pk] === 'R-OFF' || state.schedule[ck] === 'R-OFF';
+      if (isOnVacation(p.primaryId, i) || isOnVacation(p.coverId, i)) {
+        delete state.schedule[pk]; delete state.schedule[ck]; return;   // VAC shown via fallback
+      }
+      if (off.has(i)) {
+        state.schedule[pk] = reqOff ? 'R-OFF' : 'OFF';
+        delete state.schedule[ck];
+      } else if (titularOff(i)) {
+        state.schedule[ck] = p.coverShift;
+        delete state.schedule[pk];
+      } else {
+        state.schedule[pk] = standardShift(p.primaryDept, p.primaryId, i);
+        delete state.schedule[ck];
+      }
+    });
+  });
+}
+
+// If houseperson coverage is short of need, pull Rubia then Julia from RA.
+function applyHpOverflow() {
+  const hp = computeNeeds().hp;
+  const backups = ['ra_rubia', 'ra_julia'];
+  for (let i = 0; i < 7; i++) {
+    const need = hp[i] === 'ALL' ? deptSize('houseperson') : hp[i];
+    let bi = 0;
+    while (countWorking(i).ha < need && bi < backups.length) {
+      const id = backups[bi++];
+      if (isOffCell(id, i)) continue;              // only pull someone already working
+      state.schedule[`${id}_${i}`] = standardShift('houseperson', id, i);
+      state.hpBackup[`${id}_${i}`] = true;
+    }
+  }
+}
+
+// Clear every auto-fillable cell (keep granted requests + vacations).
+function clearAutoFillCells() {
+  state.hpBackup = {};
+  DEPARTMENTS.forEach(dept => {
+    if (dept.id === 'management') return;
+    dept.members.forEach(m => {
+      for (let i = 0; i < 7; i++) {
+        const key = `${m.id}_${i}`;
+        const v = state.schedule[key];
+        if (v === 'R-OFF' || v === 'VAC') continue;
+        delete state.schedule[key];
+      }
+    });
+  });
+}
+
+function autoFill() {
+  if (!state.weekStart) { toast('Primero selecciona la semana'); return; }
+  if (!state.rooms.some(r => r > 0)) { toast('Primero ingresa los cuartos vendidos'); return; }
+  if (!confirm('¿Generar el horario automáticamente? Se conservan los R-OFF de la libreta y las vacaciones; el resto se reemplaza.')) return;
+
+  const needs = computeNeeds();
+  clearAutoFillCells();
+
+  // Base departments (alias + special people excluded, handled afterward).
+  scheduleDept('supervisors', deptMemberIds('supervisors', []),                        needs.sup, 2);
+  scheduleDept('laundry',     deptMemberIds('laundry', ['lnd_jorge']),                 needs.laundry, 2);
+  scheduleDept('ra',          deptMemberIds('ra', ['ra_gabriela_c']),                  needs.ra, 2);
+  scheduleDept('houseperson', deptMemberIds('houseperson', ['hp_jorge_g']),           needs.hp, 2);
+  scheduleDept('turndown',    deptMemberIds('turndown', ['td_andrea', 'td_yesenia_p']), needs.td, 1);
+  scheduleDept('lobby',       deptMemberIds('lobby', ['lby_gabriela', 'lby_andrea']), [0,0,0,0,0,0,0], 2);
+
+  // Special handlers (order matters: titulars set before cascades; HP last).
+  applyOvernight();
+  applyYesenia();
+  applyAliasCascades();
+  applyHpOverflow();
+
+  saveState();
+  render();
+  toast('Horario generado automáticamente');
 }
 
 function renderReqForm() {
