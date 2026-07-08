@@ -402,6 +402,7 @@ body {
 .sc-work-late { background: #FDEBD0; color: #784212; }
 .sc-special { background: #F9EBEA; color: #7B241C; }
 .sc-vac     { background: #DCE3EC; color: #3B4A63; }
+.sc-cover   { background: #FEF9E7; color: #B9770E; font-style: italic; font-size: 9px; }
 
 /* ── LIBRETA CONFLICT ALERTS ── */
 .libreta-alerts { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
@@ -1170,6 +1171,7 @@ function countWorking(dayIdx) {
       if (isOnVacation(emp.id, dayIdx)) return;
       const shift = state.schedule[`${emp.id}_${dayIdx}`] || '';
       if (!shift || shift === 'OFF' || shift === 'R-OFF' || shift === 'VAC') return;
+      if (shift.startsWith('→')) return;   // cover-away marker: counted in the cover dept, not here
       // RA pulled to houseperson backup (Rubia/Julia) counts toward HP, not RA.
       if (dept.id === 'ra' && state.hpBackup[`${emp.id}_${dayIdx}`]) { counts.ha++; return; }
       if (dept.id === 'ra')          counts.ra++;
@@ -1279,8 +1281,9 @@ function renderScheduleTable() {
           const key   = `${emp.id}_${i}`;
           let label   = state.schedule[key] || '';
           if (!label && isOnVacation(emp.id, i)) label = 'VAC';
+          const isCover = label.startsWith('→');
           const def   = shiftForDept(dept.id, label);
-          const cls   = def ? def.cls : (label ? 'sc-work' : 'sc-empty');
+          const cls   = isCover ? 'sc-cover' : (def ? def.cls : (label ? 'sc-work' : 'sc-empty'));
           const disp  = label || '·';
           return `<td><div class="shift-cell ${cls}"
             onclick="openModal('${emp.id}','${esc(emp.name)}',${i},'${dept.id}')"
@@ -1469,9 +1472,9 @@ function renderLibretaAlerts() {
 // People whose primary role lives in one dept but who cover a second slot.
 // Their two roster rows are mutually exclusive on any day (handled in cascade).
 const ALIAS_PEOPLE = [
-  { name:'Gabriela C', primaryId:'ra_gabriela_c', primaryDept:'ra',          coverId:'lby_gabriela', coverShift:'7a-3:30p',      titularId:'lby_maria_m'   },
-  { name:'Andrea',     primaryId:'td_andrea',     primaryDept:'turndown',    coverId:'lby_andrea',   coverShift:'2:30p-10:45p', titularId:'lby_sarahi'    },
-  { name:'Jorge G',    primaryId:'hp_jorge_g',    primaryDept:'houseperson', coverId:'lnd_jorge',    coverShift:'8:15a-4:45p',   titularId:'lnd_victoriano'},
+  { name:'Gabriela C', primaryId:'ra_gabriela_c', primaryDept:'ra',          coverId:'lby_gabriela', coverShift:'7a-3:30p',      titularId:'lby_maria_m',    coverLabel:'Lobby AM'    },
+  { name:'Andrea',     primaryId:'td_andrea',     primaryDept:'turndown',    coverId:'lby_andrea',   coverShift:'2:30p-10:45p', titularId:'lby_sarahi',     coverLabel:'Lobby PM'    },
+  { name:'Jorge G',    primaryId:'hp_jorge_g',    primaryDept:'houseperson', coverId:'lnd_jorge',    coverShift:'8:15a-4:45p',   titularId:'lnd_victoriano', coverLabel:'Lavandería'  },
 ];
 const ALIAS_IDS = ALIAS_PEOPLE.flatMap(p => [p.primaryId, p.coverId]);
 
@@ -1635,7 +1638,7 @@ function applyAliasCascades() {
         delete state.schedule[ck];
       } else if (titularOff(i)) {
         state.schedule[ck] = p.coverShift;
-        delete state.schedule[pk];
+        state.schedule[pk] = '→ ' + p.coverLabel;   // home row shows where they went
       } else {
         state.schedule[pk] = standardShift(p.primaryDept, p.primaryId, i);
         delete state.schedule[ck];
@@ -2049,22 +2052,27 @@ async function exportExcel() {
 
   const headerRow = ws.addRow(['', 'Employee Name', ...days.map(d => d.short)]);
   const serialRow = ws.addRow(['', '', ...days.map(d => d.serial)]);
+  headerRow.height = 26; serialRow.height = 20;
   [headerRow, serialRow].forEach(row => {
     for (let c = 2; c <= 9; c++) {
       const cell = row.getCell(c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF243660' } };
-      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-      cell.alignment = { horizontal: 'center' };
+      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 12 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
   });
   ws.addRow([]);
 
+  const thin = { style: 'thin', color: { argb: 'FFD9D9D9' } };
+  const cellBorder = { top: thin, left: thin, bottom: thin, right: thin };
   DEPARTMENTS.forEach(dept => {
     const deptRow = ws.addRow(['', dept.label.toUpperCase()]);
+    deptRow.height = 22;
     for (let c = 2; c <= 9; c++) {
       const cell = deptRow.getCell(c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C4270' } };
-      cell.font = { color: { argb: 'FFE8C96B' }, bold: true };
+      cell.font = { color: { argb: 'FFE8C96B' }, bold: true, size: 12 };
+      cell.alignment = { vertical: 'middle' };
     }
 
     dept.members.forEach(emp => {
@@ -2076,12 +2084,21 @@ async function exportExcel() {
         cellsData.push({ text: def ? def.exportLabel : label, cls: def ? def.cls : null });
       }
       const row = ws.addRow(['', emp.name, ...cellsData.map(c => c.text)]);
+      row.height = 24;
+      const nameCell = row.getCell(2);
+      nameCell.font = { size: 12 };
+      nameCell.alignment = { vertical: 'middle', horizontal: 'left' };
       cellsData.forEach((c, i) => {
-        const colors = CLS_COLORS[c.cls];
-        if (!colors) return;
         const cell = row.getCell(3 + i);
-        if (colors.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } };
-        cell.font = { color: { argb: colors.font } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = cellBorder;
+        const colors = CLS_COLORS[c.cls];
+        if (colors) {
+          if (colors.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } };
+          cell.font = { color: { argb: colors.font }, size: 12 };
+        } else {
+          cell.font = { size: 12 };
+        }
       });
     });
     ws.addRow([]);
