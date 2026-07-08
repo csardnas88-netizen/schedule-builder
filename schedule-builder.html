@@ -420,6 +420,22 @@ body {
 .lib-alert.conflict { background: var(--red-pale); color: var(--red); border-color: #E6B0AA; }
 .lib-alert.warn     { background: var(--orange-pale); color: var(--orange); border-color: #F5D8A0; }
 
+/* ── PHASE 5 · REVIEW PANEL (posiciones cortas) ── */
+.exceptions-panel { display: flex; flex-direction: column; gap: 6px; margin: 14px 2px 2px; }
+.exceptions-panel:empty { display: none; }
+.exc-head {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--navy); text-transform: uppercase;
+  border-bottom: 2px solid var(--cream-dark); padding-bottom: 4px;
+}
+.exc-ok {
+  display: flex; align-items: center; gap: 8px;
+  background: #E8F8F0; color: #1A6636; border: 1px solid #ABEBC6;
+  border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600;
+}
+.exc-ok .lib-ico { font-size: 14px; }
+
 /* ── COUNTER FOOTER (sticky bottom of table) ── */
 .counts-row td {
   background: var(--navy);
@@ -757,6 +773,7 @@ body {
   <div class="schedule-wrap">
     <table class="sched-table" id="sched-table"></table>
   </div>
+  <div class="exceptions-panel" id="exceptions-panel"></div>
 </div>
 
 <!-- MODAL -->
@@ -1213,6 +1230,7 @@ function render() {
   renderRoomsGrid();
   renderLaborGrid();
   renderScheduleTable();
+  renderExceptionsPanel();
   renderReqForm();
   renderRequests();
 }
@@ -1274,21 +1292,29 @@ function renderLaborGrid() {
   }).join('');
 }
 
-// Per-day workload context shown under the RA / Supervisors / Houseperson
-// headers. "Carga" = rooms that day ÷ people actually working that day (from the
-// precomputed `working` counts). Turndowns (RA only) = occupied rooms that day.
+// Per-day workload context shown under the RA / Turndown / Supervisors /
+// Houseperson headers. "Carga" = rooms that day ÷ people actually working that
+// day (from the precomputed `working` counts). RA also shows due-outs per RA
+// (how many of each RA's rooms are check-outs). The Turndown row = occupied
+// rooms that day (every occupied room gets turndown service).
 function deptContextRows(deptId, working) {
-  const carga = (i, key) => {
-    const w = working[i][key], r = state.rooms[i] || 0;
-    return (!r || !w) ? '·' : Math.round(r / w);
+  // Per-person split of a daily total; '·' when the day is out of play or no one
+  // is working. A 0 total on an active day shows 0 (e.g. zero due-outs), not '·'.
+  const per = (total, i, key) => {
+    const w = working[i][key], active = (state.rooms[i] || 0) > 0;
+    return (!active || !w) ? '·' : Math.round((total || 0) / w);
   };
+  const carga  = (i, key) => per(state.rooms[i], i, key);
+  const dueout = (i, key) => per(state.dueouts[i], i, key);
   const cells = vals => vals.map(v => `<td>${v}</td>`).join('');
   const row = (label, vals) =>
     `<tr class="sc-context-row"><td class="col-name-td">${label}</td>${cells(vals)}</tr>`;
   const days = [0, 1, 2, 3, 4, 5, 6];
   if (deptId === 'ra')
     return row('Cuartos / RA', days.map(i => carga(i, 'ra')))
-         + row('Turndowns', days.map(i => state.rooms[i] || '·'));
+         + row('Due-outs / RA', days.map(i => dueout(i, 'ra')));
+  if (deptId === 'turndown')
+    return row('Turndowns', days.map(i => state.rooms[i] || '·'));
   if (deptId === 'supervisors')
     return row('Cuartos / Supervisor', days.map(i => carga(i, 'sup')));
   if (deptId === 'houseperson')
@@ -1505,6 +1531,63 @@ function renderLibretaAlerts() {
       <span class="lib-body"><b>${a.title}</b><span class="lib-sub">${a.sub}</span></span>
     </div>
   `).join('');
+}
+
+// ═══════════════════════════════════════════
+//  PHASE 5 · REVIEW PANEL (posiciones cortas)
+// ═══════════════════════════════════════════
+
+// Consolidated shortage check on the GENERATED schedule: per tracked position,
+// the days where people actually working fall below that day's need. Returns
+// null when nothing is scheduled yet (so the panel stays hidden until you fill).
+function buildShortPositions() {
+  const days = getDayDates();
+  const needs = computeNeeds();
+  const working = days.map((_, i) => countWorking(i));
+  const anyWorking = working.some(w => Object.values(w).reduce((a, b) => a + b, 0) > 0);
+  if (!anyWorking) return null;
+
+  const POS = [
+    { pos: 'RA',           key: 'ra',       need: needs.ra },
+    { pos: 'Houseman',     key: 'ha',       need: needs.hp,  deptId: 'houseperson' },
+    { pos: 'Supervisores', key: 'sup',      need: needs.sup, deptId: 'supervisors' },
+    { pos: 'Lavandería',   key: 'laundry',  need: needs.laundry },
+    { pos: 'Turndown',     key: 'turndown', need: needs.td },
+  ];
+  const shorts = [];
+  POS.forEach(p => {
+    const hits = [];
+    days.forEach((d, i) => {
+      if (!(state.rooms[i] > 0)) return;                 // day not in play
+      let need = p.need[i];
+      if (need === 'ALL') need = deptSize(p.deptId);
+      need = need || 0;
+      const have = working[i][p.key];
+      if (need > 0 && have < need) hits.push(`${d.short} ${have}/${need}`);
+    });
+    if (hits.length) shorts.push({ pos: p.pos, hits });
+  });
+  return shorts;
+}
+
+function renderExceptionsPanel() {
+  const box = document.getElementById('exceptions-panel');
+  if (!box) return;
+  const shorts = buildShortPositions();
+  if (shorts === null) { box.innerHTML = ''; return; }   // nothing generated yet
+  const head = `<div class="exc-head">Revisión · Posiciones cortas</div>`;
+  if (!shorts.length) {
+    box.innerHTML = head +
+      `<div class="exc-ok"><span class="lib-ico">✅</span>
+        <span>Todas las posiciones cubren la necesidad del día.</span></div>`;
+    return;
+  }
+  box.innerHTML = head + shorts.map(s => `
+    <div class="lib-alert warn">
+      <span class="lib-ico">⚠</span>
+      <span class="lib-body"><b>${s.pos} bajo lo necesario</b>
+        <span class="lib-sub">${s.hits.join(' · ')}</span></span>
+    </div>`).join('');
 }
 
 // ═══════════════════════════════════════════
