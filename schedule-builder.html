@@ -6,6 +6,7 @@
 <title>Schedule Builder — JW Marriott HOU</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --cream:       #F6F1E9;
@@ -435,6 +436,18 @@ body {
   border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600;
 }
 .exc-ok .lib-ico { font-size: 14px; }
+.sync-badge {
+  position: fixed; bottom: 12px; right: 14px; z-index: 900;
+  font-size: 11px; font-weight: 700; letter-spacing: .3px;
+  padding: 5px 11px; border-radius: 20px;
+  background: #ECECEC; color: #555;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.sync-badge.ok     { background: #E8F8F0; color: #1A6636; }
+.sync-badge.saving { background: #FBF3DE; color: #8A6D1B; }
+.sync-badge.err    { background: #FCE8E6; color: #A62B1F; }
+.sync-badge.off    { background: #ECECEC; color: #777; }
 
 /* ── COUNTER FOOTER (sticky bottom of table) ── */
 .counts-row td {
@@ -1052,6 +1065,85 @@ function loadState() {
 }
 function saveState() {
   try { localStorage.setItem('jwm_schedule_v1', JSON.stringify(state)); } catch(e) {}
+  schedulePush();
+}
+
+// ═══════════════════════════════════════════
+//  SUPABASE CLOUD SYNC  (full-state push + pull)
+//  localStorage stays the instant local cache; Supabase mirrors it.
+// ═══════════════════════════════════════════
+const SB_URL    = 'https://ixqjdqsmnvfkjuvzdtca.supabase.co';
+const SB_KEY    = 'sb_publishable_tlrAavkPyo2JRJMcFvNZ4w_nOVKou_V';
+const SB_ROW_ID = 'main';
+const sbClient  = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SB_URL, SB_KEY)
+  : null;
+
+function syncBadge(text, cls) {
+  let el = document.getElementById('sync-badge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sync-badge';
+    document.body.appendChild(el);
+  }
+  el.className = 'sync-badge ' + (cls || '');
+  el.textContent = text;
+}
+
+let _pushTimer = null;
+function schedulePush() {
+  if (!sbClient) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushState, 800);
+}
+
+async function pushState() {
+  if (!sbClient) return;
+  syncBadge('☁ Guardando…', 'saving');
+  try {
+    const { error } = await sbClient
+      .from('schedules')
+      .upsert({ id: SB_ROW_ID, data: state, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    syncBadge('☁ Sincronizado', 'ok');
+  } catch (e) {
+    console.warn('[sync] push failed:', e.message || e);
+    syncBadge('⚠ Sin sincronizar', 'err');
+  }
+}
+
+// Returns: 'loaded' (cloud row merged) | 'empty' (no row yet) | 'error' | 'nolib'
+async function pullState() {
+  if (!sbClient) return 'nolib';
+  try {
+    const { data, error } = await sbClient
+      .from('schedules').select('data').eq('id', SB_ROW_ID).maybeSingle();
+    if (error) throw error;
+    if (data && data.data && Object.keys(data.data).length) {
+      state = { ...state, ...data.data };
+      try { localStorage.setItem('jwm_schedule_v1', JSON.stringify(state)); } catch(e) {}
+      return 'loaded';
+    }
+    return 'empty';
+  } catch (e) {
+    console.warn('[sync] pull failed:', e.message || e);
+    return 'error';
+  }
+}
+
+async function syncInit() {
+  if (!sbClient) { syncBadge('· Solo local', 'off'); return; }
+  syncBadge('☁ Cargando…', 'saving');
+  const status = await pullState();
+  if (status === 'loaded') {
+    applyWeekHeader();
+    render();
+    syncBadge('☁ Sincronizado', 'ok');
+  } else if (status === 'empty') {
+    pushState();               // seed the cloud with current local state
+  } else {
+    syncBadge('⚠ Sin conexión (local)', 'err');
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1314,7 +1406,8 @@ function deptContextRows(deptId, working) {
     return row('Cuartos / RA', days.map(i => carga(i, 'ra')))
          + row('Due-outs / RA', days.map(i => dueout(i, 'ra')));
   if (deptId === 'turndown')
-    return row('Turndowns', days.map(i => state.rooms[i] || '·'));
+    return row('Turndowns', days.map(i => state.rooms[i] || '·'))
+         + row('Cuartos / Turndown', days.map(i => carga(i, 'turndown')));
   if (deptId === 'supervisors')
     return row('Cuartos / Supervisor', days.map(i => carga(i, 'sup')));
   if (deptId === 'houseperson')
@@ -2328,20 +2421,23 @@ function toast(msg) {
 //  INIT
 // ═══════════════════════════════════════════
 
-function init() {
-  loadState();
-  if (!state.weekStart) state.weekStart = nextSaturday();
-
+function applyWeekHeader() {
   const input = document.getElementById('week-start');
-  input.value = state.weekStart;
-
+  if (input) input.value = state.weekStart || '';
+  if (!state.weekStart) return;
   const start = new Date(state.weekStart + 'T12:00:00');
   const end   = new Date(start); end.setDate(start.getDate() + 6);
   const fmt   = dt => dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  document.getElementById('week-label').textContent =
-    `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
+  const wl = document.getElementById('week-label');
+  if (wl) wl.textContent = `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
+}
 
+function init() {
+  loadState();
+  if (!state.weekStart) state.weekStart = nextSaturday();
+  applyWeekHeader();
   render();
+  syncInit();          // pull from cloud, then reconcile + re-render
 }
 
 init();

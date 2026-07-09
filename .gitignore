@@ -1,0 +1,16 @@
+# ------------------------------------------------------------------
+# JW Marriott schedule-builder repository
+#
+# SECURITY: this working directory also holds personal & sensitive
+# files (immigration paperwork, financial docs, software archives,
+# recovery notes, etc.). To guarantee NONE of them can ever be
+# committed, we ignore EVERYTHING by default and explicitly allow
+# only the app file below.
+# ------------------------------------------------------------------
+
+# Ignore everything by default
+*
+
+# ...except the app itself and this ignore file
+!schedule-builder.html
+!.gitignore
