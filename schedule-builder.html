@@ -318,7 +318,11 @@ body {
 .schedule-wrap { overflow-x: auto; }
 .sched-table {
   width: 100%;
-  border-collapse: collapse;
+  /* 'separate' + border-spacing:0 renders identically to 'collapse' for this
+     design, and avoids collapse-mode quirks with the horizontally-sticky
+     employee-name column in older Chrome. */
+  border-collapse: separate;
+  border-spacing: 0;
   min-width: 680px;
 }
 .sched-table thead th {
@@ -329,9 +333,12 @@ body {
   padding: 8px 6px;
   text-align: center;
   white-space: nowrap;
-  position: sticky;
-  top: 56px;
-  z-index: 100;
+  /* NOTE: intentionally NO vertical (top) sticky here. Older Chrome — which
+     Carlos runs — mis-renders a position:sticky <thead>: the column-header row
+     is displaced downward and paints over the FIRST body row, hiding the first
+     employee (Carlos). Letting the header scroll normally with the table
+     renders correctly on every Chrome version. The employee-name COLUMN still
+     stays pinned horizontally via .col-name / td.col-name-td below. */
 }
 .sched-table thead th.col-name {
   text-align: left;
