@@ -30,6 +30,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   font-family: 'Inter', sans-serif;
@@ -775,6 +776,156 @@ body {
   .card { margin: 10px; }
   .rooms-cell input { font-size: 12px; }
 }
+
+/* ═══════════════════════════════════════════
+   PHASE 3 · LIBRETA COMPARTIDA (ported mockup UI)
+   Every selector namespaced .lib-/#lib- so it can't collide with the
+   app shell (.view, .card, .tab, .field, .btn, #toast are all the app's).
+   Palette reuses the app :root tokens; adds only what the mockup needs.
+   ═══════════════════════════════════════════ */
+#view-libreta {
+  --muted-2: #A69F91;
+  --blue: #2E5C8A;   --blue-pale: #E9F0F7;
+  --violet: #6C4FA0; --violet-pale: #EEE9F6;
+  --radius-sm: 6px;  --radius-md: 10px; --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(22,35,62,.06), 0 1px 1px rgba(22,35,62,.04);
+  --shadow-md: 0 2px 8px rgba(22,35,62,.08), 0 1px 2px rgba(22,35,62,.05);
+  --shadow-lg: 0 10px 30px rgba(22,35,62,.18);
+}
+.lib-header{background:linear-gradient(180deg,var(--navy) 0%,var(--navy-mid) 100%);padding:16px 20px 14px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 16px rgba(0,0,0,.10)}
+.lib-header h1{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#fff;letter-spacing:.2px}
+.lib-header p{font-size:10.5px;color:var(--gold-light);margin-top:2px;letter-spacing:.3px;font-weight:500}
+.lib-whoami{background:#fff;border-bottom:1px solid var(--border);padding:11px 20px;display:flex;align-items:center;gap:10px;font-size:11.5px}
+.lib-whoami-label{color:var(--muted);font-weight:600;letter-spacing:.2px;display:flex;align-items:center;gap:7px}
+.lib-avatar-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.lib-whoami select{margin-left:auto;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--cream);font-family:'Inter';font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;transition:border-color .15s}
+.lib-whoami select:hover,.lib-whoami select:focus{outline:none;border-color:var(--gold)}
+.lib-tabs{display:flex;background:#fff;border-bottom:1px solid var(--border)}
+.lib-tab{flex:1;text-align:center;padding:13px 4px 11px;font-size:11.5px;font-weight:600;color:var(--muted-2);cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.2px;transition:color .15s}
+.lib-tab.active{color:var(--navy);border-bottom-color:var(--gold);font-weight:700}
+.lib-tab:not(.active):hover{color:var(--navy)}
+.lib-view{display:none;padding:16px}
+.lib-view.active{display:block}
+#lib-view-hkweek.active,#lib-view-calendar.active{display:flex;flex-direction:column;height:calc(100vh - 240px);min-height:460px;padding:12px 12px 8px}
+.lib-card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-md);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
+.lib-card-head{background:var(--navy);color:#fff;padding:13px 18px;font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;letter-spacing:.2px}
+.lib-card-body{padding:18px}
+.lib-field{margin-bottom:16px}
+.lib-field:last-of-type{margin-bottom:0}
+.lib-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px}
+.lib-field select,.lib-field input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Inter';font-size:13px;background:var(--cream);color:var(--text);transition:border-color .15s}
+.lib-field select:focus,.lib-field input:focus{outline:none;border-color:var(--gold);background:#fff}
+.lib-type-chips{display:flex;gap:7px}
+.lib-type-chip{flex:1;padding:11px 6px;border-radius:var(--radius-sm);border:1px solid var(--border);text-align:center;font-size:11px;font-weight:700;letter-spacing:.2px;cursor:pointer;background:#fff;color:var(--muted);transition:all .15s}
+.lib-type-chip:hover{border-color:var(--muted-2)}
+.lib-type-chip.roff.active{background:var(--gold-pale);border-color:var(--gold);color:#8A6423}
+.lib-type-chip.flex.active{background:var(--blue-pale);border-color:var(--blue);color:var(--blue)}
+.lib-type-chip.vac.active{background:var(--violet-pale);border-color:var(--violet);color:var(--violet)}
+.lib-day-chips{display:flex;gap:6px;flex-wrap:wrap}
+.lib-day-chip{padding:8px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);background:#fff;transition:all .15s}
+.lib-day-chip.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.lib-day-chip.picked{background:var(--gold-pale);color:#8A6423;border-color:var(--gold-light);display:flex;align-items:center;gap:7px;font-weight:700}
+.lib-day-chip.picked .rm{cursor:pointer;font-weight:700;opacity:.55;font-size:13px;line-height:1;transition:opacity .15s}
+.lib-day-chip.picked .rm:hover{opacity:1}
+.lib-date-add-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.lib-date-add-row input{flex:1;padding:11px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Inter';font-size:12px;background:var(--cream);min-width:0;transition:border-color .15s}
+.lib-date-add-row input:focus{outline:none;border-color:var(--gold);background:#fff}
+.lib-date-add-sep{font-size:11px;color:var(--muted-2);flex-shrink:0}
+.lib-range-hint{font-size:10.5px;color:var(--muted-2);margin-bottom:10px;line-height:1.5}
+.lib-btn-add-day{padding:0 16px;border:1px solid var(--navy);border-radius:var(--radius-sm);background:var(--navy);color:#fff;font-family:'Inter';font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
+.lib-btn-add-day:hover{background:var(--navy-mid)}
+.lib-emp-picker{position:relative}
+.lib-emp-picker input[type="text"]{width:100%;padding:11px 13px 11px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Inter';font-size:13px;background:var(--cream) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="%237A756B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 12px center}
+.lib-emp-picker input[type="text"]:focus{outline:none;border-color:var(--gold);background-color:#fff}
+.lib-emp-chip{display:flex;align-items:center;justify-content:space-between;background:var(--gold-pale);border:1px solid var(--gold-light);border-radius:var(--radius-sm);padding:10px 13px;font-size:13px;font-weight:700;color:#8A6423}
+.lib-emp-chip .rm{cursor:pointer;font-weight:700;opacity:.55;padding:2px 6px;font-size:14px;transition:opacity .15s}
+.lib-emp-chip .rm:hover{opacity:1}
+.lib-emp-list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);max-height:270px;overflow-y:auto;z-index:50;display:none}
+.lib-emp-list.show{display:block}
+.lib-emp-list-group{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted-2);background:var(--cream);padding:7px 14px;position:sticky;top:0}
+.lib-emp-list-item{padding:11px 15px;font-size:13px;color:var(--text);cursor:pointer;transition:background .1s;border-bottom:1px solid var(--cream)}
+.lib-emp-list-item:last-child{border-bottom:none}
+.lib-emp-list-item:hover{background:var(--gold-pale)}
+.lib-emp-list-empty{padding:18px;text-align:center;font-size:12px;color:var(--muted-2)}
+.lib-date-range{display:flex;gap:8px}
+.lib-date-range input{flex:1}
+.lib-btn{width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--gold);color:#fff;font-family:'Inter';font-size:13px;font-weight:700;letter-spacing:.2px;cursor:pointer;margin-top:2px;transition:background .15s;box-shadow:var(--shadow-sm)}
+.lib-btn:hover{background:#A67934}
+.lib-meta-note{font-size:10.5px;color:var(--muted-2);margin-top:10px;text-align:center;line-height:1.6}
+.lib-meta-note b{color:var(--navy);font-weight:700}
+/* Phase 4 · capture-time conflict alerts */
+.lib-capture-alerts{display:none;flex-direction:column;gap:8px;margin:2px 0 12px}
+.lib-capture-alerts.show{display:flex}
+.lib-alert{font-size:12.5px;line-height:1.45;padding:9px 11px;border-radius:var(--radius-sm);border-left:3px solid}
+.lib-alert b{display:block;margin-bottom:2px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.lib-alert.danger{background:var(--red-pale);border-left-color:var(--red);color:var(--navy)}
+.lib-alert.danger b{color:var(--red)}
+.lib-alert.info{background:var(--blue-pale);border-left-color:var(--blue);color:var(--navy)}
+.lib-alert-confirm{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--gold-pale);border:1px solid var(--gold);border-radius:var(--radius-sm);padding:9px 11px;font-size:13px;font-weight:600;color:var(--navy)}
+.lib-alert-btns{display:flex;gap:8px}
+.lib-alert-btn{border:none;border-radius:var(--radius-sm);padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter'}
+.lib-alert-btn.ghost{background:#fff;border:1px solid var(--border);color:var(--muted)}
+.lib-alert-btn.solid{background:var(--navy);color:#fff}
+.lib-alert-btn.solid:hover{background:var(--navy-mid)}
+.lib-entry{background:#fff;border-radius:var(--radius-md);padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow-sm);display:flex;align-items:flex-start;gap:11px;border:1px solid var(--border);border-left:3px solid var(--gold)}
+.lib-entry.flex{border-left-color:var(--blue)}
+.lib-entry.vac{border-left-color:var(--violet)}
+.lib-entry-badge{font-size:9px;font-weight:800;letter-spacing:.5px;padding:4px 8px;border-radius:5px;background:var(--gold-pale);color:#8A6423;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.lib-entry.flex .lib-entry-badge{background:var(--blue-pale);color:var(--blue)}
+.lib-entry.vac .lib-entry-badge{background:var(--violet-pale);color:var(--violet)}
+.lib-entry-body{flex:1;min-width:0}
+.lib-entry-name{font-size:13.5px;font-weight:700;color:var(--navy);letter-spacing:.1px}
+.lib-entry-days{font-size:11.5px;color:var(--text);margin-top:3px;line-height:1.4}
+.lib-entry-meta{font-size:10px;color:var(--muted-2);margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.lib-entry-meta .sep{color:var(--border)}
+.lib-status-pill{font-size:9px;font-weight:700;letter-spacing:.2px;padding:3px 9px;border-radius:20px;white-space:nowrap;margin-top:7px;display:inline-flex;align-items:center;gap:4px}
+.lib-status-pending{background:#FBF1DD;color:#93701C}
+.lib-status-granted{background:var(--green-pale);color:var(--green)}
+.lib-status-denied{background:var(--red-pale);color:var(--red)}
+.lib-empty{text-align:center;padding:34px 16px;color:var(--muted-2);font-size:12.5px}
+.lib-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;flex-shrink:0}
+.lib-cal-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--navy);letter-spacing:.2px}
+.lib-cal-nav{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:#fff;font-size:15px;color:var(--navy);cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)}
+.lib-cal-nav:hover{border-color:var(--gold);color:var(--gold)}
+.lib-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;flex-shrink:0}
+.lib-cal-weekdays span{text-align:center;font-size:8px;font-weight:700;color:var(--muted-2);letter-spacing:.4px}
+.lib-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:3px;flex:1}
+.lib-cal-cell{background:#fff;border-radius:7px;box-shadow:var(--shadow-sm);padding:3px 2px;display:flex;flex-direction:column;cursor:pointer;position:relative;border:1px solid var(--border);overflow:hidden;min-height:0;transition:box-shadow .15s}
+.lib-cal-cell:not(.empty):hover{box-shadow:var(--shadow-md)}
+.lib-cal-cell.empty{background:transparent;box-shadow:none;border:none;cursor:default}
+.lib-cal-cell.today{border-color:var(--gold);border-width:1.5px}
+.lib-cal-cell-num{font-size:9px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:2px}
+.lib-cal-cell-entries{display:flex;flex-direction:column;gap:1.5px;overflow:hidden;flex:1}
+.lib-cal-entry-tag{font-size:6.2px;font-weight:700;line-height:1.3;padding:1.5px 3px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;letter-spacing:.1px}
+.lib-cal-entry-tag.roff{background:var(--gold)}
+.lib-cal-entry-tag.flex{background:var(--blue)}
+.lib-cal-entry-tag.vac{background:var(--violet)}
+.lib-cal-cell-more{font-size:6px;color:var(--muted-2);font-weight:700;margin-top:auto}
+.lib-hk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;flex:1;min-height:0}
+.lib-hk-day{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:9px 5px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);transition:box-shadow .15s;min-height:0}
+.lib-hk-day.today{border-color:var(--gold);border-width:1.5px}
+.lib-hk-day-head{text-align:center;margin-bottom:7px;flex-shrink:0;padding-bottom:6px;border-bottom:1px solid var(--cream-dark)}
+.lib-hk-day-name{font-size:9px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.4px}
+.lib-hk-day-num{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:700;color:var(--navy);line-height:1.15;margin-top:1px}
+.lib-hk-day-entries{display:flex;flex-direction:column;gap:3.5px;overflow-y:auto;flex:1;min-height:0}
+.lib-hk-tag{font-size:9px;font-weight:700;line-height:1.35;padding:5px 3px;border-radius:6px;color:#fff;text-align:center;overflow:hidden}
+.lib-hk-tag .nm{display:block;white-space:nowrap;letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+.lib-hk-tag .tp{display:block;font-size:6.8px;font-weight:800;opacity:.85;letter-spacing:.4px;margin-top:1.5px}
+.lib-hk-tag.roff{background:var(--gold)}
+.lib-hk-tag.flex{background:var(--blue)}
+.lib-hk-tag.vac{background:var(--violet)}
+.lib-hk-day-empty{font-size:9px;color:var(--muted-2);text-align:center;margin-top:12px}
+.lib-cal-legend{display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:9.5px;color:var(--muted);flex-shrink:0;font-weight:600}
+.lib-cal-legend span{display:flex;align-items:center;gap:5px}
+.lib-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.lib-dot.roff{background:var(--gold)}
+.lib-dot.flex{background:var(--blue)}
+.lib-dot.vac{background:var(--violet)}
+.lib-sheet-overlay{position:fixed;inset:0;background:rgba(15,20,35,.5);z-index:500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.lib-sheet-overlay.show{display:flex}
+.lib-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:440px;max-height:75vh;overflow-y:auto;padding:20px 18px 30px;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+.lib-sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.lib-sheet-title{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:700;color:var(--navy);margin-bottom:14px;letter-spacing:.2px}
 </style>
 </head>
 <body>
@@ -852,28 +1003,116 @@ body {
 
     </section>
 
-    <!-- ========== VIEW: LIBRETA ========== -->
+    <!-- ========== VIEW: LIBRETA (Phase 3 — Libreta Compartida) ========== -->
     <section class="view" id="view-libreta" data-view="libreta">
 
-      <!-- LIBRETA DE REQUESTS -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Libreta de Requests (R-OFF)</h2>
-          <span id="req-count">0 requests</span>
-        </div>
-        <div class="req-form">
-          <div class="field" style="flex:1;min-width:180px">
-            <label>Empleado</label>
-            <select id="req-emp"></select>
+      <div class="lib-header">
+        <h1>Libreta Compartida</h1>
+        <p>R-OFF · Flex · Vacaciones — JW Marriott Housekeeping</p>
+      </div>
+
+      <div class="lib-whoami">
+        <span class="lib-whoami-label"><span class="lib-avatar-dot"></span>Registrando como</span>
+        <select id="lib-whoami-select">
+          <option>Carlos Sardinas</option>
+          <option>Manuel</option>
+          <option>Rebeca</option>
+          <option>Ingrid</option>
+        </select>
+      </div>
+
+      <div class="lib-tabs">
+        <div class="lib-tab active" data-view="capture">＋ Nueva</div>
+        <div class="lib-tab" data-view="hkweek">Semana HK</div>
+        <div class="lib-tab" data-view="calendar">Calendario</div>
+      </div>
+
+      <!-- SUB-VIEW: capture -->
+      <div class="lib-view active" id="lib-view-capture">
+        <div class="lib-card">
+          <div class="lib-card-head">Registrar petición</div>
+          <div class="lib-card-body">
+            <div class="lib-field">
+              <label>Empleado</label>
+              <div class="lib-emp-picker">
+                <input type="text" id="lib-emp-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="LB.filterEmpList()" onfocus="LB.showEmpList()">
+                <div id="lib-emp-chip" class="lib-emp-chip" style="display:none"></div>
+                <div id="lib-emp-list" class="lib-emp-list"></div>
+              </div>
+            </div>
+            <div class="lib-field">
+              <label>Tipo de petición</label>
+              <div class="lib-type-chips">
+                <div class="lib-type-chip roff active" data-type="roff">R-OFF</div>
+                <div class="lib-type-chip flex" data-type="flex">Flex</div>
+                <div class="lib-type-chip vac" data-type="vac">Vacaciones</div>
+              </div>
+            </div>
+            <div class="lib-field" id="lib-days-field">
+              <label>Día(s) solicitado(s) — cualquier fecha futura</label>
+              <div class="lib-date-add-row">
+                <input type="date" id="lib-day-picker" title="Desde">
+                <span class="lib-date-add-sep">a</span>
+                <input type="date" id="lib-day-picker-end" title="Hasta (opcional)">
+                <button type="button" class="lib-btn-add-day" onclick="LB.addPickedDay()">＋ Agregar</button>
+              </div>
+              <p class="lib-range-hint">Deja "hasta" vacío para un solo día, o llénalo para agregar varios días consecutivos de una vez.</p>
+              <div class="lib-day-chips" id="lib-picked-days"></div>
+            </div>
+            <div class="lib-field" id="lib-range-field" style="display:none">
+              <label>Rango de fechas</label>
+              <div class="lib-date-range">
+                <input type="date" id="lib-vac-start">
+                <input type="date" id="lib-vac-end">
+              </div>
+            </div>
+            <div class="lib-capture-alerts" id="lib-capture-alerts"></div>
+            <button class="lib-btn" onclick="LB.submitEntry()">Guardar petición</button>
+            <p class="lib-meta-note">Se guarda automáticamente: <b>quién la registró</b> y <b>fecha/hora exacta</b> — no hay que escribirlo.</p>
           </div>
-          <div class="field">
-            <label>Días solicitados</label>
-            <div class="day-chips" id="req-days"></div>
-          </div>
-          <button class="btn btn-navy" onclick="addRequest()">＋ Agregar</button>
         </div>
-        <div class="libreta-alerts" id="libreta-alerts"></div>
-        <div class="req-list" id="req-list"></div>
+      </div>
+
+      <!-- SUB-VIEW: semana HK -->
+      <div class="lib-view" id="lib-view-hkweek">
+        <div class="lib-cal-header">
+          <button class="lib-cal-nav" onclick="LB.shiftHkWeek(-1)">‹</button>
+          <div class="lib-cal-title" id="lib-hk-title">Semana</div>
+          <button class="lib-cal-nav" onclick="LB.shiftHkWeek(1)">›</button>
+        </div>
+        <div class="lib-hk-grid" id="lib-hk-grid"></div>
+        <div class="lib-cal-legend">
+          <span><i class="lib-dot roff"></i> R-OFF</span>
+          <span><i class="lib-dot flex"></i> Flex</span>
+          <span><i class="lib-dot vac"></i> Vacaciones</span>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW: calendario -->
+      <div class="lib-view" id="lib-view-calendar">
+        <div class="lib-cal-header">
+          <button class="lib-cal-nav" onclick="LB.shiftMonth(-1)">‹</button>
+          <div class="lib-cal-title" id="lib-cal-title">Mes</div>
+          <button class="lib-cal-nav" onclick="LB.shiftMonth(1)">›</button>
+        </div>
+        <div class="lib-cal-weekdays">
+          <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
+        </div>
+        <div class="lib-cal-grid" id="lib-cal-grid"></div>
+        <div class="lib-cal-legend">
+          <span><i class="lib-dot roff"></i> R-OFF</span>
+          <span><i class="lib-dot flex"></i> Flex</span>
+          <span><i class="lib-dot vac"></i> Vacaciones</span>
+        </div>
+      </div>
+
+      <!-- Day detail sheet (opens from a calendar cell) -->
+      <div class="lib-sheet-overlay" id="lib-sheet-overlay" onclick="if(event.target===this) LB.closeSheet()">
+        <div class="lib-sheet">
+          <div class="lib-sheet-handle"></div>
+          <div class="lib-sheet-title" id="lib-sheet-title">—</div>
+          <div id="lib-sheet-entries"></div>
+        </div>
       </div>
 
     </section>
@@ -1606,7 +1845,7 @@ function onDueoutsChange(idx, val) {
 }
 
 function clearSchedule() {
-  if (!confirm('¿Limpiar todo el horario y la libreta de requests? (Los cuartos vendidos se mantendrán)')) return;
+  if (!confirm('¿Limpiar todo el horario? (Los cuartos vendidos y la Libreta Compartida se mantendrán)')) return;
   state.schedule = {};
   state.requests = [];
   saveState();
@@ -2085,6 +2324,7 @@ function autoFill() {
 function renderReqForm() {
   // Employee dropdown grouped by department
   const sel = document.getElementById('req-emp');
+  if (!sel) return;   // old Libreta markup replaced by Phase 3 Libreta Compartida — no-op
   sel.innerHTML = DEPARTMENTS.map(d => `
     <optgroup label="${d.label}">
       ${d.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
@@ -2153,6 +2393,7 @@ function removeRequest(empId) {
 
 function renderRequests() {
   const list  = document.getElementById('req-list');
+  if (!list) return;  // old Libreta markup replaced by Phase 3 Libreta Compartida — no-op
   const days  = getDayDates();
   const count = state.requests.length;
   document.getElementById('req-count').textContent =
@@ -2552,6 +2793,464 @@ function init() {
 }
 
 init();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PHASE 3 · LIBRETA COMPARTIDA — data + interactions
+     Isolated IIFE. Only window.LB is exported (for inline handlers).
+     Reuses the app's global sbClient, state, DEPARTMENTS and toast().
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // Real roster from the app's DEPARTMENTS. Managers capture requests, they
+  // are not the subject of requests, so 'management' is excluded from the picker.
+  const ROSTER = (typeof DEPARTMENTS !== 'undefined' ? DEPARTMENTS : [])
+    .filter(d => d.id !== 'management')
+    .flatMap(d => d.members.map(m => ({ name: m.name, dept: d.label })));
+
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const HK_DAYS = ['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'];
+
+  let entries = [];
+  let selectedName = null, selectedDept = null;
+  let selectedType = 'roff';
+  let pickedDates = [];
+  let hkWeekStart = null;
+  let calYear, calMonth;
+  let sheetIso = null;
+  let confirmArmed = false;   // set true when the manager overrides a cascade conflict
+
+  const $ = id => document.getElementById(id);
+
+  // ── date helpers (build ISO from local parts — no UTC drift) ──
+  function isoOf(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function todayIso(){ return isoOf(new Date()); }
+  function rangeDates(s, e){
+    const out = []; let d = new Date(s + 'T12:00:00'); const end = new Date(e + 'T12:00:00');
+    while (d <= end){ out.push(isoOf(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  }
+  // Snap any date back to the Saturday that opens its hotel week (Sat–Fri).
+  // Keeps the HK grid's hardcoded Sáb/Dom/… labels correct even if state.weekStart
+  // is misaligned (the day picker doesn't force a Saturday).
+  function saturdayOf(iso){ const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 1) % 7)); return isoOf(d); }
+  function recentSaturday(){ return saturdayOf(todayIso()); }
+  function fmtDate(iso){ return new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'short', month:'short', day:'numeric'}); }
+  function fmtStamp(ts){
+    if (!ts) return '';
+    const d = new Date(ts); if (isNaN(d)) return String(ts);
+    return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' +
+           d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+  }
+  function rangeLabel(dates){
+    if (!dates || !dates.length) return '';
+    const f = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {month:'short', day:'numeric'});
+    return dates.length === 1 ? f(dates[0]) : `${f(dates[0])} – ${f(dates[dates.length - 1])}`;
+  }
+  function typeLabel(t){ return t === 'roff' ? 'R-OFF' : t === 'flex' ? 'FLEX' : 'VACACIONES'; }
+  function typeAbbrev(t){ return t === 'roff' ? 'R-OFF' : t === 'flex' ? 'FLEX' : 'VAC'; }
+  function firstName(name){ return String(name || '').split(' ')[0]; }
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function say(msg){ if (typeof toast === 'function') toast(msg); }
+
+  // ── Supabase (reuses the app's sbClient + notebook_requests table) ──
+  function hasDB(){ return typeof sbClient !== 'undefined' && sbClient; }
+  function rowToEntry(r){
+    const dates = (r.dates || []).slice().sort();
+    return {
+      id: r.id, name: r.employee_name, dept: r.employee_dept,
+      emp: `${r.employee_name} — ${r.employee_dept}`,
+      type: r.request_type, dates,
+      capturedBy: r.captured_by, capturedAt: fmtStamp(r.captured_at),
+      decidedBy: r.decided_by, status: r.status,
+    };
+  }
+  async function loadEntries(){
+    if (!hasDB()) return;
+    try {
+      const { data, error } = await sbClient.from('notebook_requests')
+        .select('*').order('captured_at', { ascending: true });
+      if (error) throw error;
+      entries = (data || []).map(rowToEntry);
+      refreshViews();
+    } catch (e) { console.warn('[libreta] load failed:', e.message || e); }
+  }
+  function subscribeRealtime(){
+    if (!hasDB() || !sbClient.channel) return;
+    try {
+      sbClient.channel('notebook_requests_live')
+        .on('postgres_changes', { event:'*', schema:'public', table:'notebook_requests' }, loadEntries)
+        .subscribe();
+    } catch (e) { console.warn('[libreta] realtime failed:', e.message || e); }
+  }
+  function entriesForDate(iso){ return entries.filter(e => e.dates.includes(iso)); }
+
+  // ── Phase 4 · capture-time conflict alerts ───────────────────────────
+  // Cover pairs mirror the app's first four COVER_CASCADES, but modeled as
+  // TWO sides so same-side coverers (Paty & Yorlin, who both cover Yesenia)
+  // never false-trigger a conflict against each other.
+  const LIB_COVER_PAIRS = [
+    { position:'Lobby AM',         sideA:['lby_maria_m'],    sideB:['ra_gabriela_c'] },
+    { position:'Lobby PM',         sideA:['lby_sarahi'],     sideB:['td_andrea'] },
+    { position:'Washer / Laundry', sideA:['lnd_victoriano'], sideB:['hp_jorge_g'] },
+    { position:'Houseman PM',      sideA:['td_yesenia_p'],   sideB:['td_paty_c','td_yorlin_a'] },
+  ];
+  const EARLY_DEPTS = ['Supervisors','Laundry','Houseperson'];  // small teams (spec 4.2)
+
+  // (name, deptLabel) → empId, using the same roster the picker draws from.
+  function empIdOf(name, deptLabel){
+    const dept = (typeof DEPARTMENTS !== 'undefined' ? DEPARTMENTS : []).find(d => d.label === deptLabel);
+    if (!dept) return null;
+    const m = dept.members.find(x => x.name === name);
+    return m ? m.id : null;
+  }
+  // Expand empIds to include their alias rows (same physical person, two rows).
+  function withAliases(ids){
+    const out = new Set();
+    ids.forEach(id => (typeof aliasesFor === 'function' ? aliasesFor(id) : [id]).forEach(a => out.add(a)));
+    return out;
+  }
+  // The dates the form would currently submit (picked days, or the vac range).
+  function currentDates(){
+    if (selectedType === 'vac'){
+      const s = $('lib-vac-start') && $('lib-vac-start').value;
+      const e = $('lib-vac-end') && $('lib-vac-end').value;
+      if (!s || !e || new Date(e) < new Date(s)) return [];
+      return rangeDates(s, e);
+    }
+    return [...pickedDates];
+  }
+  // 4.1 · bidirectional cascade — the OTHER side of a cover pair already off.
+  function cascadeConflicts(name, dept, dates){
+    const myId = empIdOf(name, dept);
+    if (!myId || !dates || !dates.length) return [];
+    const mine = withAliases([myId]);
+    const hits = [], seen = new Set();
+    LIB_COVER_PAIRS.forEach(p => {
+      const aSet = withAliases(p.sideA), bSet = withAliases(p.sideB);
+      let others = null;
+      if ([...mine].some(id => aSet.has(id)))      others = bSet;
+      else if ([...mine].some(id => bSet.has(id))) others = aSet;
+      if (!others) return;
+      dates.forEach(iso => {
+        entries.forEach(en => {
+          if (!en.dates.includes(iso)) return;
+          const enId = empIdOf(en.name, en.dept);
+          if (!enId || !others.has(enId)) return;
+          const key = p.position + '|' + en.name + '|' + iso;
+          if (seen.has(key)) return; seen.add(key);
+          hits.push({ position:p.position, otherName:en.name, dateIso:iso });
+        });
+      });
+    });
+    return hits;
+  }
+  // 4.2 · early warning — a 2nd+ person from a small team off the same day.
+  function earlyWarnings(name, dept, dates){
+    if (!EARLY_DEPTS.includes(dept) || !dates || !dates.length) return [];
+    const out = [];
+    dates.forEach(iso => {
+      const others = new Set();
+      entries.forEach(en => { if (en.dept === dept && en.name !== name && en.dates.includes(iso)) others.add(en.name); });
+      if (others.size) out.push({ dept, dateIso:iso, count: others.size + 1 });
+    });
+    return out;
+  }
+  // Live, non-blocking render of both alert kinds as the manager builds a request.
+  function refreshCaptureAlerts(){
+    const box = $('lib-capture-alerts'); if (!box) return;
+    if (!selectedName){ box.innerHTML = ''; box.classList.remove('show'); return; }
+    const dates = currentDates();
+    const cascade = cascadeConflicts(selectedName, selectedDept, dates);
+    const early   = earlyWarnings(selectedName, selectedDept, dates);
+    let html = '';
+    cascade.forEach(c => {
+      html += `<div class="lib-alert danger"><b>Conflicto de cobertura</b>${esc(c.otherName)} ya tiene el ${esc(fmtDate(c.dateIso))} registrado. ${esc(selectedName)} es su única cobertura para ${esc(c.position)}.</div>`;
+    });
+    early.forEach(w => {
+      html += `<div class="lib-alert info">${w.count} personas de ${esc(w.dept)} ya tienen el ${esc(fmtDate(w.dateIso))} registrado.</div>`;
+    });
+    box.innerHTML = html;
+    box.classList.toggle('show', !!html);
+  }
+
+  // ── Employee search picker ──
+  function showEmpList(){ $('lib-emp-list').classList.add('show'); filterEmpList(); }
+  function filterEmpList(){
+    const q = $('lib-emp-search').value.trim().toLowerCase();
+    const matches = ROSTER.filter(e => e.name.toLowerCase().includes(q));
+    const el = $('lib-emp-list');
+    if (!matches.length){ el.innerHTML = '<div class="lib-emp-list-empty">Sin resultados</div>'; return; }
+    const groups = {};
+    matches.forEach(e => { (groups[e.dept] = groups[e.dept] || []).push(e); });
+    let html = '';
+    Object.keys(groups).forEach(dept => {
+      html += `<div class="lib-emp-list-group">${esc(dept)}</div>`;
+      groups[dept].forEach(e => {
+        const n = e.name.replace(/'/g, "\\'"), dp = dept.replace(/'/g, "\\'");
+        html += `<div class="lib-emp-list-item" onclick="LB.selectEmp('${n}','${dp}')">${esc(e.name)}</div>`;
+      });
+    });
+    el.innerHTML = html;
+  }
+  function selectEmp(name, dept){
+    selectedName = name; selectedDept = dept;
+    $('lib-emp-search').style.display = 'none';
+    $('lib-emp-list').classList.remove('show');
+    const chip = $('lib-emp-chip');
+    chip.style.display = 'flex';
+    chip.innerHTML = `<span>${esc(name)} <span style="font-weight:400;opacity:.75">— ${esc(dept)}</span></span><span class="rm" onclick="LB.clearEmp()">✕</span>`;
+    refreshCaptureAlerts();
+  }
+  function clearEmp(){
+    selectedName = null; selectedDept = null;
+    $('lib-emp-search').style.display = 'block';
+    $('lib-emp-search').value = '';
+    $('lib-emp-chip').style.display = 'none';
+    refreshCaptureAlerts();
+  }
+
+  // ── Type chips (R-OFF / Flex / Vacaciones) ──
+  function wireTypeChips(){
+    document.querySelectorAll('#view-libreta .lib-type-chip').forEach(c => {
+      c.addEventListener('click', () => {
+        document.querySelectorAll('#view-libreta .lib-type-chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        selectedType = c.dataset.type;
+        const isVac = selectedType === 'vac';
+        $('lib-days-field').style.display = isVac ? 'none' : 'block';
+        $('lib-range-field').style.display = isVac ? 'block' : 'none';
+        refreshCaptureAlerts();
+      });
+    });
+  }
+
+  // ── Multi / non-consecutive date capture ──
+  function addPickedDay(){
+    const start = $('lib-day-picker').value;
+    const endInput = $('lib-day-picker-end').value;
+    if (!start){ say('Selecciona al menos la fecha "Desde"'); return; }
+    const end = endInput || start;
+    if (new Date(end) < new Date(start)){ say('"Hasta" no puede ser antes que "Desde"'); return; }
+    const newDates = rangeDates(start, end).filter(d => !pickedDates.includes(d));
+    if (!newDates.length){ say('Esos días ya están agregados'); return; }
+    pickedDates.push(...newDates); pickedDates.sort();
+    renderPickedDays();
+    $('lib-day-picker').value = ''; $('lib-day-picker-end').value = '';
+    if (newDates.length > 1) say(`${newDates.length} días agregados de una vez`);
+    refreshCaptureAlerts();
+  }
+  function removePickedDay(iso){ pickedDates = pickedDates.filter(d => d !== iso); renderPickedDays(); refreshCaptureAlerts(); }
+  function renderPickedDays(){
+    const el = $('lib-picked-days'); if (!el) return;
+    el.innerHTML = pickedDates.map(iso => {
+      const label = new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'short', day:'numeric', month:'short'});
+      return `<div class="lib-day-chip picked">${label}<span class="rm" onclick="LB.removePickedDay('${iso}')">✕</span></div>`;
+    }).join('');
+  }
+
+  // ── Submit → cascade gate (4.1) → insert into notebook_requests as pending ──
+  async function submitEntry(){
+    const armed = confirmArmed; confirmArmed = false;   // override lasts one call only
+    if (!selectedName){ say('Busca y selecciona un empleado'); return; }
+    if (!hasDB()){ say('Sin conexión — intenta de nuevo'); return; }
+    let dates;
+    if (selectedType === 'vac'){
+      const s = $('lib-vac-start').value, e = $('lib-vac-end').value;
+      if (!s || !e){ say('Selecciona el rango de fechas'); return; }
+      if (new Date(e) < new Date(s)){ say('El fin no puede ser antes del inicio'); return; }
+      dates = rangeDates(s, e);
+    } else {
+      if (!pickedDates.length){ say('Agrega al menos un día'); return; }
+      dates = [...pickedDates];
+    }
+    // 4.1 · a cover-cascade conflict blocks until the manager confirms override.
+    if (!armed && cascadeConflicts(selectedName, selectedDept, dates).length){ showConfirmGate(); return; }
+    await performInsert(dates);
+  }
+  function showConfirmGate(){
+    const box = $('lib-capture-alerts'); if (!box) return;
+    refreshCaptureAlerts();   // make sure the amber conflict rows are visible
+    const bar = document.createElement('div');
+    bar.className = 'lib-alert-confirm';
+    bar.innerHTML = '<span>¿Continuar de todas formas?</span>' +
+      '<div class="lib-alert-btns">' +
+      '<button type="button" class="lib-alert-btn ghost" onclick="LB.cancelSubmit()">Cancelar</button>' +
+      '<button type="button" class="lib-alert-btn solid" onclick="LB.confirmSubmit()">Sí, continuar</button>' +
+      '</div>';
+    box.appendChild(bar);
+    box.classList.add('show');
+    if (bar.scrollIntoView) bar.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+  function confirmSubmit(){ confirmArmed = true; submitEntry(); }
+  function cancelSubmit(){ confirmArmed = false; refreshCaptureAlerts(); say('Captura cancelada'); }
+  async function performInsert(dates){
+    const who = $('lib-whoami-select').value;
+    const row = {
+      employee_name: selectedName, employee_dept: selectedDept, request_type: selectedType,
+      dates, captured_by: who, captured_at: new Date().toISOString(), status: 'pending',
+    };
+    try {
+      const { error } = await sbClient.from('notebook_requests').insert(row);
+      if (error) throw error;
+    } catch (e) { console.warn('[libreta] insert failed:', e.message || e); say('Error al guardar la petición'); return; }
+    pickedDates = []; renderPickedDays();
+    if (selectedType === 'vac'){ $('lib-vac-start').value = ''; $('lib-vac-end').value = ''; }
+    clearEmp();
+    const box = $('lib-capture-alerts'); if (box){ box.innerHTML = ''; box.classList.remove('show'); }
+    say('Petición guardada — visible para los 4 al instante');
+    loadEntries();
+  }
+
+  // ── Entry card (rendered in the day-detail sheet) ──
+  function entryCard(en){
+    const daysTxt = en.type === 'vac' ? rangeLabel(en.dates) : en.dates.map(fmtDate).join(', ');
+    const statusHtml = en.status === 'granted'
+      ? `<span class="lib-status-pill lib-status-granted">Otorgado por ${esc(en.decidedBy || '')}</span>`
+      : en.status === 'denied'
+        ? `<span class="lib-status-pill lib-status-denied">Negado por ${esc(en.decidedBy || '')}</span>`
+        : `<span class="lib-status-pill lib-status-pending">Pendiente de decisión</span>`;
+    return `<div class="lib-entry ${en.type}">
+      <span class="lib-entry-badge">${typeLabel(en.type)}</span>
+      <div class="lib-entry-body">
+        <div class="lib-entry-name">${esc(en.emp)}</div>
+        <div class="lib-entry-days">${esc(daysTxt)}</div>
+        <div class="lib-entry-meta"><span>${esc(en.capturedBy)}</span><span class="sep">·</span><span>${esc(en.capturedAt)}</span></div>
+        ${statusHtml}
+      </div>
+    </div>`;
+  }
+
+  // ── Semana HK (Sat–Fri expanded grid) ──
+  function nameFontSize(name){
+    const len = name.length;
+    if (len <= 5)  return 9.5;
+    if (len <= 7)  return 8.6;
+    if (len <= 9)  return 7.6;
+    if (len <= 11) return 6.8;
+    return 6.2;
+  }
+  function shiftHkWeek(delta){
+    const d = new Date((hkWeekStart || recentSaturday()) + 'T12:00:00');
+    d.setDate(d.getDate() + delta * 7);
+    hkWeekStart = isoOf(d);
+    renderHkWeek();
+  }
+  function renderHkWeek(){
+    const grid = $('lib-hk-grid'); if (!grid) return;
+    if (!hkWeekStart) hkWeekStart = recentSaturday();
+    const start = new Date(hkWeekStart + 'T12:00:00');
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const fmt = d => d.toLocaleDateString('es-US', {day:'numeric', month:'short'});
+    $('lib-hk-title').textContent = `Sáb ${fmt(start)} – Vie ${fmt(end)}`;
+    const t = todayIso();
+    let html = '';
+    for (let i = 0; i < 7; i++){
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const iso = isoOf(d);
+      const tags = entriesForDate(iso).map(e => {
+        const n = firstName(e.name);
+        return `<div class="lib-hk-tag ${e.type}"><span class="nm" style="font-size:${nameFontSize(n)}px">${esc(n)}</span><span class="tp">${typeAbbrev(e.type)}</span></div>`;
+      }).join('');
+      html += `<div class="lib-hk-day ${iso === t ? 'today' : ''}">
+        <div class="lib-hk-day-head"><div class="lib-hk-day-name">${HK_DAYS[i]}</div><div class="lib-hk-day-num">${d.getDate()}</div></div>
+        <div class="lib-hk-day-entries">${tags || '<div class="lib-hk-day-empty">—</div>'}</div>
+      </div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  // ── Calendario (month grid, Sun–Sat) ──
+  function shiftMonth(delta){
+    calMonth += delta;
+    if (calMonth < 0){ calMonth = 11; calYear--; }
+    if (calMonth > 11){ calMonth = 0; calYear++; }
+    renderCalendar();
+  }
+  function renderCalendar(){
+    const grid = $('lib-cal-grid'); if (!grid) return;
+    $('lib-cal-title').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+    const startOffset = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const t = todayIso(); const MAX = 3;
+    let cells = '';
+    for (let i = 0; i < startOffset; i++) cells += `<div class="lib-cal-cell empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++){
+      const iso = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dayEntries = entriesForDate(iso);
+      const tags = dayEntries.slice(0, MAX)
+        .map(e => `<div class="lib-cal-entry-tag ${e.type}">${esc(firstName(e.name))} · ${typeAbbrev(e.type)}</div>`).join('');
+      cells += `<div class="lib-cal-cell ${iso === t ? 'today' : ''}" onclick="LB.openDaySheet('${iso}')">
+        <div class="lib-cal-cell-num">${day}</div>
+        <div class="lib-cal-cell-entries">${tags}</div>
+        ${dayEntries.length > MAX ? `<div class="lib-cal-cell-more">+${dayEntries.length - MAX} más</div>` : ''}
+      </div>`;
+    }
+    grid.innerHTML = cells;
+  }
+
+  // ── Day detail sheet ──
+  function openDaySheet(iso){
+    sheetIso = iso;
+    const dayEntries = entriesForDate(iso);
+    const label = new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'long', day:'numeric', month:'long'});
+    $('lib-sheet-title').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    $('lib-sheet-entries').innerHTML = dayEntries.length
+      ? dayEntries.map(entryCard).join('')
+      : `<div class="lib-empty">Sin peticiones este día.</div>`;
+    $('lib-sheet-overlay').classList.add('show');
+  }
+  function closeSheet(){ sheetIso = null; $('lib-sheet-overlay').classList.remove('show'); }
+
+  function refreshViews(){
+    renderHkWeek();
+    renderCalendar();
+    if (sheetIso && $('lib-sheet-overlay').classList.contains('show')) openDaySheet(sheetIso);
+  }
+
+  // ── Sub-tab switching (scoped to #view-libreta so it never touches the app's .view) ──
+  function wireTabs(){
+    document.querySelectorAll('#view-libreta .lib-tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('#view-libreta .lib-tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('#view-libreta .lib-view').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        $('lib-view-' + t.dataset.view).classList.add('active');
+        if (t.dataset.view === 'hkweek') renderHkWeek();
+        if (t.dataset.view === 'calendar') renderCalendar();
+      });
+    });
+  }
+
+  function init(){
+    if (!$('view-libreta')) return;
+    wireTabs();
+    wireTypeChips();
+    ['lib-vac-start','lib-vac-end'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', refreshCaptureAlerts); });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.lib-emp-picker')){ const l = $('lib-emp-list'); if (l) l.classList.remove('show'); }
+    });
+    try { hkWeekStart = saturdayOf((typeof state !== 'undefined' && state && state.weekStart) ? state.weekStart : todayIso()); }
+    catch (e) { hkWeekStart = recentSaturday(); }
+    const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+    renderPickedDays();
+    loadEntries();
+    subscribeRealtime();
+  }
+
+  // Only handlers referenced by inline onclick/oninput/onfocus are exported.
+  window.LB = {
+    filterEmpList, showEmpList, selectEmp, clearEmp,
+    addPickedDay, removePickedDay, submitEntry,
+    confirmSubmit, cancelSubmit,
+    shiftHkWeek, shiftMonth, openDaySheet, closeSheet,
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 </script>
 </body>
 </html>
