@@ -467,6 +467,7 @@ body {
 .sc-work-late { background: #FDEBD0; color: #784212; }
 .sc-special { background: #F9EBEA; color: #7B241C; }
 .sc-vac     { background: #DCE3EC; color: #3B4A63; }
+.sc-flex    { background: #D6EAF8; color: #1A5276; }
 .sc-cover   { background: #FEF9E7; color: #B9770E; font-style: italic; font-size: 9px; }
 
 /* ── LIBRETA CONFLICT ALERTS ── */
@@ -1261,6 +1262,9 @@ const DEPT_SHIFTS = {
 
 // Vacation is a universal third cell state, selectable in any department's modal
 const VAC_SHIFT = { label:'VAC', exportLabel:'VAC', cls:'sc-vac' };
+// Flex is a granted "flexible" day off from the Libreta — a distinct cell state
+// from R-OFF (both are days off, but the manager tracks them separately).
+const FLEX_SHIFT = { label:'FLEX', exportLabel:'FLEX', cls:'sc-flex' };
 
 const DEPARTMENTS = [
   {
@@ -1386,6 +1390,7 @@ let state = {
   lowSeasonHistory: {}, // { weekStart: { empId: true } } who got the extra reduced-day treatment
   weekendHistory:   {}, // { empId: 'YYYY-MM-DD' } last Sat+Sun both off
   hpBackup:         {}, // { `${empId}_${dayIdx}`: true } RA pulled to houseperson backup
+  libCells:         {}, // { `${empId}_${dayIdx}`: 'R-OFF'|'FLEX'|'VAC' } cells the Libreta grant-sync wrote for the loaded week (so it can reconcile idempotently)
 };
 
 function loadState() {
@@ -1505,6 +1510,7 @@ function nextSaturday() {
 
 function shiftForDept(deptId, label) {
   if (label === 'VAC') return VAC_SHIFT;
+  if (label === 'FLEX') return FLEX_SHIFT;
   return (DEPT_SHIFTS[deptId] || []).find(s => s.label === label);
 }
 
@@ -1830,28 +1836,39 @@ function onWeekChange() {
 
   saveState();
   render();
+  libSyncSchedule();     // re-evaluate notebook grants for the newly-loaded week
+}
+
+// Re-run the Libreta grant sync (defined in the Libreta IIFE, which loads after
+// this script). Safe no-op until that module is ready.
+function libSyncSchedule() {
+  if (window.LB && typeof window.LB.syncSchedule === 'function') window.LB.syncSchedule();
 }
 
 function onRoomsChange(idx, val) {
   state.rooms[idx] = Math.min(384, Math.max(0, parseInt(val) || 0));
   saveState();
   renderLaborGrid();
+  libSyncSchedule();     // occupancy changed → some pending requests may now grant
 }
 
 function onDueoutsChange(idx, val) {
   state.dueouts[idx] = Math.min(384, Math.max(0, parseInt(val) || 0));
   saveState();
   renderLaborGrid();
+  libSyncSchedule();     // due-outs changed → re-check Sup/HP minimums
 }
 
 function clearSchedule() {
   if (!confirm('¿Limpiar todo el horario? (Los cuartos vendidos y la Libreta Compartida se mantendrán)')) return;
   state.schedule = {};
   state.requests = [];
+  state.libCells = {};
   saveState();
   renderScheduleTable();
   renderLaborGrid();
   renderRequests();
+  libSyncSchedule();     // re-place granted Libreta R-OFF / FLEX / VAC cells
   toast('Horario limpiado');
 }
 
@@ -2286,7 +2303,7 @@ function clearAutoFillCells() {
       for (let i = 0; i < 7; i++) {
         const key = `${m.id}_${i}`;
         const v = state.schedule[key];
-        if (v === 'R-OFF' || v === 'VAC') continue;
+        if (v === 'R-OFF' || v === 'VAC' || v === 'FLEX') continue;
         delete state.schedule[key];
       }
     });
@@ -2318,6 +2335,7 @@ function autoFill() {
 
   saveState();
   render();
+  libSyncSchedule();     // re-assert notebook grants on top of the fresh auto-fill
   toast('Horario generado automáticamente');
 }
 
@@ -2435,7 +2453,7 @@ function openModal(empId, empName, dayIdx, deptId) {
 
   let current = state.schedule[ctx.key] || '';
   if (!current && isOnVacation(empId, dayIdx)) current = 'VAC';
-  const shifts = [...(DEPT_SHIFTS[deptId] || []), VAC_SHIFT];
+  const shifts = [...(DEPT_SHIFTS[deptId] || []), FLEX_SHIFT, VAC_SHIFT];
 
   document.getElementById('modal-opts').innerHTML = shifts.map(s => `
     <div class="modal-opt ${s.label === current ? 'active' : ''}"
@@ -2643,6 +2661,7 @@ const CLS_COLORS = {
   'sc-work-late': { bg: 'FFFDEBD0', font: 'FF784212' },
   'sc-special':   { bg: 'FFF9EBEA', font: 'FF7B241C' },
   'sc-vac':       { bg: 'FFDCE3EC', font: 'FF3B4A63' },
+  'sc-flex':      { bg: 'FFD6EAF8', font: 'FF1A5276' },
 };
 
 async function exportExcel() {
@@ -2875,6 +2894,7 @@ init();
       if (error) throw error;
       entries = (data || []).map(rowToEntry);
       refreshViews();
+      syncSchedule();     // reflect grants into the loaded week's schedule grid
     } catch (e) { console.warn('[libreta] load failed:', e.message || e); }
   }
   function subscribeRealtime(){
@@ -2974,6 +2994,126 @@ init();
     });
     box.innerHTML = html;
     box.classList.toggle('show', !!html);
+  }
+
+  // ── Phase 5 · grant logic + schedule write-through ────────────────────
+  // A granted request flows into the LOADED week's grid as an R-OFF / FLEX /
+  // VAC cell. Granting is the DEFAULT outcome; a request only stays 'pending'
+  // on a genuine conflict: the week's occupancy isn't entered yet, or granting
+  // it would drop the department below its operational minimum (spec 4.3).
+  // Vacations always grant immediately. The schedule grid holds ONE week at a
+  // time (state.weekStart .. +6), so this reconciles whichever week is loaded;
+  // requests for other weeks fill in when that week is loaded.
+  const NEED_KEY = { ra:'ra', supervisors:'sup', houseperson:'hp', laundry:'laundry', turndown:'td' };
+  function deptIdOf(empId){
+    const d = (typeof DEPARTMENTS !== 'undefined' ? DEPARTMENTS : []).find(x => x.members.some(m => m.id === empId));
+    return d ? d.id : null;
+  }
+  // Day index 0..6 of the loaded week for an ISO date, or -1 if outside it.
+  function weekDayIndex(iso){
+    if (typeof state === 'undefined' || !state || !state.weekStart) return -1;
+    const a = new Date(state.weekStart + 'T12:00:00'), b = new Date(iso + 'T12:00:00');
+    const diff = Math.round((b - a) / 86400000);
+    return (diff >= 0 && diff <= 6) ? diff : -1;
+  }
+  function cellLabelFor(type){ return type === 'vac' ? 'VAC' : type === 'flex' ? 'FLEX' : 'R-OFF'; }
+
+  // Reconcile every notebook request into the loaded week's grid + request status.
+  async function syncSchedule(){
+    if (typeof state === 'undefined' || !state || !state.weekStart) return;
+    if (!state.libCells) state.libCells = {};
+    const beforeSnapshot = JSON.stringify(state.schedule) + '|' + JSON.stringify(state.libCells);
+
+    // 1) Un-write the cells this module wrote last pass (unless a manual edit
+    //    replaced them), restoring the grid to its notebook-free baseline.
+    Object.keys(state.libCells).forEach(key => {
+      if (state.schedule[key] === state.libCells[key]) delete state.schedule[key];
+    });
+    state.libCells = {};
+
+    const needs = (typeof computeNeeds === 'function') ? computeNeeds() : null;
+
+    // Who is already off each day (per dept), from the now notebook-free grid +
+    // manual vacation ranges — the basis for the capacity / minimum-staffing check.
+    const offSet = {};   // `${deptId}_${day}` → Set(empId)
+    const setOf = (deptId, day) => (offSet[deptId + '_' + day] || (offSet[deptId + '_' + day] = new Set()));
+    for (let day = 0; day < 7; day++){
+      DEPARTMENTS.forEach(dept => {
+        dept.members.forEach(m => {
+          const s = state.schedule[m.id + '_' + day];
+          const isOff = s === 'OFF' || s === 'R-OFF' || s === 'VAC' ||
+                        (typeof isOnVacation === 'function' && isOnVacation(m.id, day));
+          if (isOff) setOf(dept.id, day).add(m.id);
+        });
+      });
+    }
+
+    // 2) Walk requests in capture order (first-come-first-served) and decide.
+    const updates = [];   // { id, status }
+    entries.forEach(en => {
+      if (en.status === 'denied') return;                   // respect a manual denial
+      const empId  = empIdOf(en.name, en.dept);
+      const deptId = empId ? deptIdOf(empId) : null;
+      const days = [];
+      en.dates.forEach(iso => { const d = weekDayIndex(iso); if (d >= 0) days.push(d); });
+      if (!days.length) return;                             // none of its dates are in the loaded week
+
+      let anyFail = false;
+      days.forEach(day => {
+        if (!empId){ anyFail = true; return; }              // name not on the grid roster
+        const key = empId + '_' + day;
+        const existing = state.schedule[key];
+        const set = deptId ? setOf(deptId, day) : null;
+
+        if (en.type === 'vac'){                             // vacations always grant
+          if (!existing){ state.schedule[key] = 'VAC'; state.libCells[key] = 'VAC'; }
+          if (set) set.add(empId);
+          return;
+        }
+        // roff / flex — operational gate
+        const rooms = state.rooms[day] || 0;
+        if (!rooms){ anyFail = true; return; }              // occupancy not entered yet → pending
+        const needRaw = (needs && deptId && NEED_KEY[deptId] != null) ? needs[NEED_KEY[deptId]][day] : null;
+        let ok;
+        if (needRaw == null)        ok = true;              // no formula for this dept → grant freely
+        else if (needRaw === 'ALL') ok = false;            // all hands required → cannot grant
+        else {
+          const already = set && set.has(empId);
+          const size = (typeof deptSize === 'function') ? deptSize(deptId) : 0;
+          const working = size - (set ? set.size : 0) - (already ? 0 : 1);
+          ok = working >= needRaw;                          // still meet the minimum after this off
+        }
+        if (!ok){ anyFail = true; return; }                 // would break the minimum → pending
+        const lbl = cellLabelFor(en.type);
+        if (!existing){ state.schedule[key] = lbl; state.libCells[key] = lbl; }
+        if (set) set.add(empId);
+      });
+
+      const newStatus = (en.type === 'vac') ? 'granted' : (anyFail ? 'pending' : 'granted');
+      if (newStatus !== en.status) updates.push({ id: en.id, status: newStatus });
+    });
+
+    // 3) Persist the grid + refresh the labor counters (synchronous, before any await).
+    //    Only push to the cloud when the grid actually changed, so an unrelated
+    //    notebook edit doesn't bounce the shared week-state between managers.
+    const changed = (JSON.stringify(state.schedule) + '|' + JSON.stringify(state.libCells)) !== beforeSnapshot;
+    if (changed && typeof saveState === 'function') saveState();
+    if (typeof renderScheduleTable === 'function') renderScheduleTable();
+    if (typeof renderLaborGrid === 'function') renderLaborGrid();
+
+    // 4) Push only the status transitions to Supabase. The decision is
+    //    deterministic, so a re-run computes the same statuses → no further
+    //    writes, and the realtime echo converges instead of looping.
+    if (updates.length && hasDB()){
+      const who = ($('lib-whoami-select') && $('lib-whoami-select').value) || null;
+      for (const u of updates){
+        const patch = u.status === 'granted'
+          ? { status:'granted', decided_by: who, decided_at: new Date().toISOString() }
+          : { status:'pending', decided_by: null, decided_at: null };
+        try { await sbClient.from('notebook_requests').update(patch).eq('id', u.id); }
+        catch (e){ console.warn('[libreta] status update failed:', e.message || e); }
+      }
+    }
   }
 
   // ── Employee search picker ──
@@ -3246,6 +3386,7 @@ init();
     addPickedDay, removePickedDay, submitEntry,
     confirmSubmit, cancelSubmit,
     shiftHkWeek, shiftMonth, openDaySheet, closeSheet,
+    syncSchedule,
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
