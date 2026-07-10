@@ -66,6 +66,62 @@ body {
 }
 .header-actions { display: flex; gap: 8px; }
 
+/* ── APP SHELL (sidebar navigation) ── */
+.app-shell { display: flex; align-items: flex-start; }
+.sidebar {
+  flex: 0 0 186px;
+  width: 186px;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  background: var(--navy);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 150;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold-light);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-item .nav-ico { font-size: 15px; line-height: 1; width: 18px; text-align: center; }
+.nav-item:hover { background: var(--navy-mid); color: var(--white); }
+.nav-item.active { background: var(--gold); color: var(--white); box-shadow: 0 1px 6px rgba(0,0,0,0.2); }
+.app-main { flex: 1 1 auto; min-width: 0; }  /* min-width:0 lets the schedule scroll instead of widening the layout */
+.view { display: none; }
+.view.active { display: block; }
+
+/* Mobile: sidebar collapses to a fixed bottom tab bar */
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column; }
+  .sidebar {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+    width: 100%; height: auto;
+    flex-direction: row; gap: 8px;
+    padding: 6px 8px;
+    border-right: none; border-top: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.25);
+    z-index: 200;
+  }
+  .nav-item { flex: 1; justify-content: center; padding: 9px 6px; }
+  .app-main { padding-bottom: 66px; }   /* clear the fixed bottom bar */
+  .sync-badge { bottom: 70px; }         /* lift sync badge above the tab bar */
+}
+
 /* ── BUTTONS ── */
 .btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -737,63 +793,92 @@ body {
   </div>
 </header>
 
-<!-- WEEK SETUP -->
-<div class="card">
-  <div class="card-header">
-    <h2>Semana</h2>
-    <span id="week-label">—</span>
-  </div>
-  <div class="week-setup">
-    <div class="field">
-      <label>Fecha de inicio (Sábado)</label>
-      <input type="date" id="week-start" onchange="onWeekChange()">
-    </div>
-    <div class="stats-bar" id="total-stats" style="flex:1;border-top:none;padding:0;background:transparent;gap:8px;align-items:center">
-    </div>
-  </div>
-  <div class="rooms-grid" id="rooms-grid"></div>
-</div>
+<!-- APP SHELL: sidebar + main content -->
+<div class="app-shell">
 
-<!-- LIBRETA DE REQUESTS -->
-<div class="card">
-  <div class="card-header">
-    <h2>Libreta de Requests (R-OFF)</h2>
-    <span id="req-count">0 requests</span>
-  </div>
-  <div class="req-form">
-    <div class="field" style="flex:1;min-width:180px">
-      <label>Empleado</label>
-      <select id="req-emp"></select>
-    </div>
-    <div class="field">
-      <label>Días solicitados</label>
-      <div class="day-chips" id="req-days"></div>
-    </div>
-    <button class="btn btn-navy" onclick="addRequest()">＋ Agregar</button>
-  </div>
-  <div class="libreta-alerts" id="libreta-alerts"></div>
-  <div class="req-list" id="req-list"></div>
-</div>
+  <!-- SIDEBAR NAVIGATION -->
+  <nav class="sidebar" id="sidebar">
+    <button class="nav-item active" data-view="semana" onclick="switchView('semana')">
+      <span class="nav-ico">🗓</span><span class="nav-lbl">Semana</span>
+    </button>
+    <button class="nav-item" data-view="libreta" onclick="switchView('libreta')">
+      <span class="nav-ico">📓</span><span class="nav-lbl">Libreta</span>
+    </button>
+  </nav>
 
-<!-- LABOR NEEDS -->
-<div class="card">
-  <div class="card-header">
-    <h2>Necesidades de Labor</h2>
-    <span>Cuartos vendidos × estándares</span>
-  </div>
-  <div class="labor-grid" id="labor-grid"></div>
-</div>
+  <!-- MAIN CONTENT -->
+  <main class="app-main">
 
-<!-- SCHEDULE -->
-<div class="card">
-  <div class="card-header">
-    <h2>Horario Semanal</h2>
-    <span>Toca una celda para asignar turno</span>
-  </div>
-  <div class="schedule-wrap">
-    <table class="sched-table" id="sched-table"></table>
-  </div>
-  <div class="exceptions-panel" id="exceptions-panel"></div>
+    <!-- ========== VIEW: SEMANA ========== -->
+    <section class="view active" id="view-semana" data-view="semana">
+
+      <!-- WEEK SETUP -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Semana</h2>
+          <span id="week-label">—</span>
+        </div>
+        <div class="week-setup">
+          <div class="field">
+            <label>Fecha de inicio (Sábado)</label>
+            <input type="date" id="week-start" onchange="onWeekChange()">
+          </div>
+          <div class="stats-bar" id="total-stats" style="flex:1;border-top:none;padding:0;background:transparent;gap:8px;align-items:center">
+          </div>
+        </div>
+        <div class="rooms-grid" id="rooms-grid"></div>
+      </div>
+
+      <!-- LABOR NEEDS -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Necesidades de Labor</h2>
+          <span>Cuartos vendidos × estándares</span>
+        </div>
+        <div class="labor-grid" id="labor-grid"></div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Horario Semanal</h2>
+          <span>Toca una celda para asignar turno</span>
+        </div>
+        <div class="schedule-wrap">
+          <table class="sched-table" id="sched-table"></table>
+        </div>
+        <div class="exceptions-panel" id="exceptions-panel"></div>
+      </div>
+
+    </section>
+
+    <!-- ========== VIEW: LIBRETA ========== -->
+    <section class="view" id="view-libreta" data-view="libreta">
+
+      <!-- LIBRETA DE REQUESTS -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Libreta de Requests (R-OFF)</h2>
+          <span id="req-count">0 requests</span>
+        </div>
+        <div class="req-form">
+          <div class="field" style="flex:1;min-width:180px">
+            <label>Empleado</label>
+            <select id="req-emp"></select>
+          </div>
+          <div class="field">
+            <label>Días solicitados</label>
+            <div class="day-chips" id="req-days"></div>
+          </div>
+          <button class="btn btn-navy" onclick="addRequest()">＋ Agregar</button>
+        </div>
+        <div class="libreta-alerts" id="libreta-alerts"></div>
+        <div class="req-list" id="req-list"></div>
+      </div>
+
+    </section>
+
+  </main>
 </div>
 
 <!-- MODAL -->
@@ -2439,11 +2524,30 @@ function applyWeekHeader() {
   if (wl) wl.textContent = `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
 }
 
+// ── Sidebar view switching (Phase 1 app shell) ──
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v =>
+    v.classList.toggle('active', v.dataset.view === view));
+  document.querySelectorAll('.nav-item').forEach(n =>
+    n.classList.toggle('active', n.dataset.view === view));
+  window.scrollTo(0, 0);
+  // UI-local only — deliberately NOT part of the synced state, so each manager
+  // can be on a different section at the same time.
+  try { localStorage.setItem('jwm_ui_view', view); } catch (e) {}
+}
+function restoreView() {
+  let v = 'semana';
+  try { v = localStorage.getItem('jwm_ui_view') || 'semana'; } catch (e) {}
+  if (!document.getElementById('view-' + v)) v = 'semana';
+  switchView(v);
+}
+
 function init() {
   loadState();
   if (!state.weekStart) state.weekStart = nextSaturday();
   applyWeekHeader();
   render();
+  restoreView();       // apply last-used sidebar section (UI-local)
   syncInit();          // pull from cloud, then reconcile + re-render
 }
 
