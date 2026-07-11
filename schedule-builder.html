@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schedule Builder — JW Marriott HOU</title>
+<title>Schedule Builder</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -486,7 +486,7 @@ body {
 .lib-alert.conflict { background: var(--red-pale); color: var(--red); border-color: #E6B0AA; }
 .lib-alert.warn     { background: var(--orange-pale); color: var(--orange); border-color: #F5D8A0; }
 
-/* ── PHASE 5 · REVIEW PANEL (posiciones cortas) ── */
+/* ── PHASE 5 · REVIEW PANEL (short positions) ── */
 .exceptions-panel { display: flex; flex-direction: column; gap: 6px; margin: 14px 2px 2px; }
 .exceptions-panel:empty { display: none; }
 .exc-head {
@@ -935,13 +935,13 @@ body {
 <header class="app-header">
   <div class="app-header-left">
     <h1>Schedule Builder</h1>
-    <p>JW Marriott Houston Downtown · Housekeeping</p>
+    <p>Housekeeping</p>
   </div>
   <div class="header-actions">
-    <button class="btn btn-ghost" onclick="openSeniorityModal()">📋 Antigüedad</button>
-    <button class="btn btn-navy" onclick="autoFill()">⚡ Auto-llenar</button>
-    <button class="btn btn-ghost" onclick="clearSchedule()">🗑 Limpiar</button>
-    <button class="btn btn-gold" onclick="exportExcel()">⬇ Exportar Excel</button>
+    <button class="btn btn-ghost" onclick="openSeniorityModal()">📋 Seniority</button>
+    <button class="btn btn-navy" onclick="autoFill()">⚡ Auto-fill</button>
+    <button class="btn btn-ghost" onclick="clearSchedule()">🗑 Clear</button>
+    <button class="btn btn-gold" onclick="exportExcel()">⬇ Export Excel</button>
   </div>
 </header>
 
@@ -951,28 +951,28 @@ body {
   <!-- SIDEBAR NAVIGATION -->
   <nav class="sidebar" id="sidebar">
     <button class="nav-item active" data-view="semana" onclick="switchView('semana')">
-      <span class="nav-ico">🗓</span><span class="nav-lbl">Semana</span>
+      <span class="nav-ico">🗓</span><span class="nav-lbl">Week</span>
     </button>
     <button class="nav-item" data-view="libreta" onclick="switchView('libreta')">
-      <span class="nav-ico">📓</span><span class="nav-lbl">Libreta</span>
+      <span class="nav-ico">📓</span><span class="nav-lbl">Notebook</span>
     </button>
   </nav>
 
   <!-- MAIN CONTENT -->
   <main class="app-main">
 
-    <!-- ========== VIEW: SEMANA ========== -->
+    <!-- ========== VIEW: WEEK ========== -->
     <section class="view active" id="view-semana" data-view="semana">
 
       <!-- WEEK SETUP -->
       <div class="card">
         <div class="card-header">
-          <h2>Semana</h2>
+          <h2>Week</h2>
           <span id="week-label">—</span>
         </div>
         <div class="week-setup">
           <div class="field">
-            <label>Fecha de inicio (Sábado)</label>
+            <label>Start date (Saturday)</label>
             <input type="date" id="week-start" onchange="onWeekChange()">
           </div>
           <div class="stats-bar" id="total-stats" style="flex:1;border-top:none;padding:0;background:transparent;gap:8px;align-items:center">
@@ -984,8 +984,8 @@ body {
       <!-- LABOR NEEDS -->
       <div class="card">
         <div class="card-header">
-          <h2>Necesidades de Labor</h2>
-          <span>Cuartos vendidos × estándares</span>
+          <h2>Labor Needs</h2>
+          <span>Rooms sold × standards</span>
         </div>
         <div class="labor-grid" id="labor-grid"></div>
       </div>
@@ -993,8 +993,8 @@ body {
       <!-- SCHEDULE -->
       <div class="card">
         <div class="card-header">
-          <h2>Horario Semanal</h2>
-          <span>Toca una celda para asignar turno</span>
+          <h2>Weekly Schedule</h2>
+          <span>Tap a cell to assign a shift</span>
         </div>
         <div class="schedule-wrap">
           <table class="sched-table" id="sched-table"></table>
@@ -1008,12 +1008,12 @@ body {
     <section class="view" id="view-libreta" data-view="libreta">
 
       <div class="lib-header">
-        <h1>Libreta Compartida</h1>
-        <p>R-OFF · Flex · Vacaciones — JW Marriott Housekeeping</p>
+        <h1>Shared Notebook</h1>
+        <p>R-OFF · Flex · Vacation — Housekeeping</p>
       </div>
 
       <div class="lib-whoami">
-        <span class="lib-whoami-label"><span class="lib-avatar-dot"></span>Registrando como</span>
+        <span class="lib-whoami-label"><span class="lib-avatar-dot"></span>Recording as</span>
         <select id="lib-whoami-select">
           <option>Carlos Sardinas</option>
           <option>Manuel</option>
@@ -1023,69 +1023,69 @@ body {
       </div>
 
       <div class="lib-tabs">
-        <div class="lib-tab active" data-view="capture">＋ Nueva</div>
-        <div class="lib-tab" data-view="hkweek">Semana HK</div>
-        <div class="lib-tab" data-view="calendar">Calendario</div>
+        <div class="lib-tab active" data-view="capture">＋ New</div>
+        <div class="lib-tab" data-view="hkweek">HK Week</div>
+        <div class="lib-tab" data-view="calendar">Calendar</div>
       </div>
 
       <!-- SUB-VIEW: capture -->
       <div class="lib-view active" id="lib-view-capture">
         <div class="lib-card">
-          <div class="lib-card-head">Registrar petición</div>
+          <div class="lib-card-head">Record request</div>
           <div class="lib-card-body">
             <div class="lib-field">
-              <label>Empleado</label>
+              <label>Employee</label>
               <div class="lib-emp-picker">
-                <input type="text" id="lib-emp-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="LB.filterEmpList()" onfocus="LB.showEmpList()">
+                <input type="text" id="lib-emp-search" placeholder="Search by name..." autocomplete="off" oninput="LB.filterEmpList()" onfocus="LB.showEmpList()">
                 <div id="lib-emp-chip" class="lib-emp-chip" style="display:none"></div>
                 <div id="lib-emp-list" class="lib-emp-list"></div>
               </div>
             </div>
             <div class="lib-field">
-              <label>Tipo de petición</label>
+              <label>Request type</label>
               <div class="lib-type-chips">
                 <div class="lib-type-chip roff active" data-type="roff">R-OFF</div>
                 <div class="lib-type-chip flex" data-type="flex">Flex</div>
-                <div class="lib-type-chip vac" data-type="vac">Vacaciones</div>
+                <div class="lib-type-chip vac" data-type="vac">Vacation</div>
               </div>
             </div>
             <div class="lib-field" id="lib-days-field">
-              <label>Día(s) solicitado(s) — cualquier fecha futura</label>
+              <label>Requested day(s) — any future date</label>
               <div class="lib-date-add-row">
-                <input type="date" id="lib-day-picker" title="Desde">
-                <span class="lib-date-add-sep">a</span>
-                <input type="date" id="lib-day-picker-end" title="Hasta (opcional)">
-                <button type="button" class="lib-btn-add-day" onclick="LB.addPickedDay()">＋ Agregar</button>
+                <input type="date" id="lib-day-picker" title="From">
+                <span class="lib-date-add-sep">to</span>
+                <input type="date" id="lib-day-picker-end" title="To (optional)">
+                <button type="button" class="lib-btn-add-day" onclick="LB.addPickedDay()">＋ Add</button>
               </div>
-              <p class="lib-range-hint">Deja "hasta" vacío para un solo día, o llénalo para agregar varios días consecutivos de una vez.</p>
+              <p class="lib-range-hint">Leave "to" empty for a single day, or fill it to add several consecutive days at once.</p>
               <div class="lib-day-chips" id="lib-picked-days"></div>
             </div>
             <div class="lib-field" id="lib-range-field" style="display:none">
-              <label>Rango de fechas</label>
+              <label>Date range</label>
               <div class="lib-date-range">
                 <input type="date" id="lib-vac-start">
                 <input type="date" id="lib-vac-end">
               </div>
             </div>
             <div class="lib-capture-alerts" id="lib-capture-alerts"></div>
-            <button class="lib-btn" onclick="LB.submitEntry()">Guardar petición</button>
-            <p class="lib-meta-note">Se guarda automáticamente: <b>quién la registró</b> y <b>fecha/hora exacta</b> — no hay que escribirlo.</p>
+            <button class="lib-btn" onclick="LB.submitEntry()">Save request</button>
+            <p class="lib-meta-note">Saved automatically: <b>who logged it</b> and <b>exact date/time</b> — no need to type it.</p>
           </div>
         </div>
       </div>
 
-      <!-- SUB-VIEW: semana HK -->
+      <!-- SUB-VIEW: HK week -->
       <div class="lib-view" id="lib-view-hkweek">
         <div class="lib-cal-header">
           <button class="lib-cal-nav" onclick="LB.shiftHkWeek(-1)">‹</button>
-          <div class="lib-cal-title" id="lib-hk-title">Semana</div>
+          <div class="lib-cal-title" id="lib-hk-title">Week</div>
           <button class="lib-cal-nav" onclick="LB.shiftHkWeek(1)">›</button>
         </div>
         <div class="lib-hk-grid" id="lib-hk-grid"></div>
         <div class="lib-cal-legend">
           <span><i class="lib-dot roff"></i> R-OFF</span>
           <span><i class="lib-dot flex"></i> Flex</span>
-          <span><i class="lib-dot vac"></i> Vacaciones</span>
+          <span><i class="lib-dot vac"></i> Vacation</span>
         </div>
       </div>
 
@@ -1093,17 +1093,17 @@ body {
       <div class="lib-view" id="lib-view-calendar">
         <div class="lib-cal-header">
           <button class="lib-cal-nav" onclick="LB.shiftMonth(-1)">‹</button>
-          <div class="lib-cal-title" id="lib-cal-title">Mes</div>
+          <div class="lib-cal-title" id="lib-cal-title">Month</div>
           <button class="lib-cal-nav" onclick="LB.shiftMonth(1)">›</button>
         </div>
         <div class="lib-cal-weekdays">
-          <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
+          <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
         </div>
         <div class="lib-cal-grid" id="lib-cal-grid"></div>
         <div class="lib-cal-legend">
           <span><i class="lib-dot roff"></i> R-OFF</span>
           <span><i class="lib-dot flex"></i> Flex</span>
-          <span><i class="lib-dot vac"></i> Vacaciones</span>
+          <span><i class="lib-dot vac"></i> Vacation</span>
         </div>
       </div>
 
@@ -1127,9 +1127,9 @@ body {
     <div class="modal-handle"></div>
     <div class="modal-emp" id="modal-emp-name"></div>
     <div class="modal-day" id="modal-day-label"></div>
-    <div class="modal-section-label">Selecciona turno</div>
+    <div class="modal-section-label">Select shift</div>
     <div class="modal-options" id="modal-opts"></div>
-    <button class="modal-clear" onclick="selectShift('')">✕ Limpiar celda</button>
+    <button class="modal-clear" onclick="selectShift('')">✕ Clear cell</button>
   </div>
 </div>
 
@@ -1141,32 +1141,32 @@ body {
     <div class="modal-day" id="prefs-emp-dept"></div>
 
     <div class="prefs-tabs">
-      <div class="prefs-tab active" data-tab="prefs" onclick="switchPrefsTab('prefs')">Preferencias</div>
-      <div class="prefs-tab" data-tab="vac" onclick="switchPrefsTab('vac')">Vacaciones</div>
+      <div class="prefs-tab active" data-tab="prefs" onclick="switchPrefsTab('prefs')">Preferences</div>
+      <div class="prefs-tab" data-tab="vac" onclick="switchPrefsTab('vac')">Vacation</div>
     </div>
 
     <div id="prefs-tab-prefs" class="prefs-tab-content">
-      <div class="modal-section-label">Días libres</div>
+      <div class="modal-section-label">Days off</div>
       <div class="modal-options" id="prefs-offstyle-opts"></div>
 
-      <div class="modal-section-label">Fin de semana</div>
+      <div class="modal-section-label">Weekend</div>
       <div class="modal-options" id="prefs-weekend-opts" style="grid-template-columns:1fr 1fr 1fr;"></div>
 
-      <div class="modal-section-label">Notas</div>
-      <textarea id="prefs-notes" rows="3" placeholder="Notas sobre este empleado…" oninput="onNotesChange(this.value)"></textarea>
+      <div class="modal-section-label">Notes</div>
+      <textarea id="prefs-notes" rows="3" placeholder="Notes about this employee…" oninput="onNotesChange(this.value)"></textarea>
     </div>
 
     <div id="prefs-tab-vac" class="prefs-tab-content" style="display:none">
-      <div class="modal-section-label">Agregar rango de vacaciones</div>
+      <div class="modal-section-label">Add vacation range</div>
       <div class="vac-form">
-        <div class="field"><label>Inicio</label><input type="date" id="vac-start"></div>
-        <div class="field"><label>Fin</label><input type="date" id="vac-end"></div>
+        <div class="field"><label>Start</label><input type="date" id="vac-start"></div>
+        <div class="field"><label>End</label><input type="date" id="vac-end"></div>
         <button class="btn btn-navy" onclick="addVacationRange()">＋</button>
       </div>
       <div class="vac-list" id="vac-list"></div>
     </div>
 
-    <button class="modal-clear" onclick="closePrefsModal()">Cerrar</button>
+    <button class="modal-clear" onclick="closePrefsModal()">Close</button>
   </div>
 </div>
 
@@ -1174,10 +1174,10 @@ body {
 <div class="modal-overlay" id="seniority-modal" style="display:none" onclick="onSeniorityOverlayClick(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-emp">Antigüedad</div>
-    <div class="modal-day">Fecha de contratación por empleado — se usa para desempatar reducciones en temporada baja</div>
+    <div class="modal-emp">Seniority</div>
+    <div class="modal-day">Hire date per employee — used to break ties for low-season reductions</div>
     <div class="seniority-list" id="seniority-list"></div>
-    <button class="modal-clear" onclick="closeSeniorityModal()">Cerrar</button>
+    <button class="modal-clear" onclick="closeSeniorityModal()">Close</button>
   </div>
 </div>
 
@@ -1189,7 +1189,7 @@ body {
 //  CONSTANTS
 // ═══════════════════════════════════════════
 
-const DAYS = ['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'];
+const DAYS = ['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
 
 const LABOR = {
   ra:       { label: 'Room Att.',  pct: 0.562 },
@@ -1435,16 +1435,16 @@ function schedulePush() {
 
 async function pushState() {
   if (!sbClient) return;
-  syncBadge('☁ Guardando…', 'saving');
+  syncBadge('☁ Saving…', 'saving');
   try {
     const { error } = await sbClient
       .from('schedules')
       .upsert({ id: SB_ROW_ID, data: state, updated_at: new Date().toISOString() });
     if (error) throw error;
-    syncBadge('☁ Sincronizado', 'ok');
+    syncBadge('☁ Synced', 'ok');
   } catch (e) {
     console.warn('[sync] push failed:', e.message || e);
-    syncBadge('⚠ Sin sincronizar', 'err');
+    syncBadge('⚠ Not synced', 'err');
   }
 }
 
@@ -1474,11 +1474,11 @@ async function syncInit() {
   if (status === 'loaded') {
     applyWeekHeader();
     render();
-    syncBadge('☁ Sincronizado', 'ok');
+    syncBadge('☁ Synced', 'ok');
   } else if (status === 'empty') {
     pushState();               // seed the cloud with current local state
   } else {
-    syncBadge('⚠ Sin conexión (local)', 'err');
+    syncBadge('⚠ Offline (local)', 'err');
   }
 }
 
@@ -1562,7 +1562,7 @@ const RA_LOAD_TARGETS = [
   { rooms: 18, dueouts: 1,  priority: 3 },
   { rooms: 14, dueouts: 11, priority: 4 },
 ];
-const RA_TOLERANCE = 4;    // best-fit score above this → day marked "fuera de estándar"
+const RA_TOLERANCE = 4;    // best-fit score above this → day marked "off standard"
 const LAUNDRY_FIXED = 5;   // washer + 4 linen attendants
 
 function scoreCombo(roomsPerRA, doPerRA, t) {
@@ -1669,7 +1669,7 @@ function renderRoomsGrid() {
   document.getElementById('rooms-grid').innerHTML = days.map((d, i) => `
     <div class="rooms-cell">
       <label>${d.label}</label>
-      <div class="rooms-sublabel">Cuartos</div>
+      <div class="rooms-sublabel">Rooms</div>
       <input type="number" min="0" max="384"
         value="${state.rooms[i] || ''}"
         placeholder="—"
@@ -1710,7 +1710,7 @@ function renderLaborGrid() {
           const needNum = row.need === 'ALL' ? deptSize(row.deptId) : row.need;
           const cls = row.have === 0 ? '' : row.have >= needNum ? 'ok' : 'warn';
           const flag = row.flag
-            ? `<span class="labor-flag" title="Fuera de estándar · score ${row.score.toFixed(1)}">◆</span>`
+            ? `<span class="labor-flag" title="Off standard · score ${row.score.toFixed(1)}">◆</span>`
             : '';
           return `<div class="labor-row">
             <span class="labor-pos">${row.pos}${flag}</span>
@@ -1722,7 +1722,7 @@ function renderLaborGrid() {
 }
 
 // Per-day workload context shown under the RA / Turndown / Supervisors /
-// Houseperson headers. "Carga" = rooms that day ÷ people actually working that
+// Houseperson headers. "Load" = rooms that day ÷ people actually working that
 // day (from the precomputed `working` counts). RA also shows due-outs per RA
 // (how many of each RA's rooms are check-outs). The Turndown row = occupied
 // rooms that day (every occupied room gets turndown service).
@@ -1740,15 +1740,15 @@ function deptContextRows(deptId, working) {
     `<tr class="sc-context-row"><td class="col-name-td">${label}</td>${cells(vals)}</tr>`;
   const days = [0, 1, 2, 3, 4, 5, 6];
   if (deptId === 'ra')
-    return row('Cuartos / RA', days.map(i => carga(i, 'ra')))
+    return row('Rooms / RA', days.map(i => carga(i, 'ra')))
          + row('Due-outs / RA', days.map(i => dueout(i, 'ra')));
   if (deptId === 'turndown')
     return row('Turndowns', days.map(i => state.rooms[i] || '·'))
-         + row('Cuartos / Turndown', days.map(i => carga(i, 'turndown')));
+         + row('Rooms / Turndown', days.map(i => carga(i, 'turndown')));
   if (deptId === 'supervisors')
-    return row('Cuartos / Supervisor', days.map(i => carga(i, 'sup')));
+    return row('Rooms / Supervisor', days.map(i => carga(i, 'sup')));
   if (deptId === 'houseperson')
-    return row('Cuartos / Houseman', days.map(i => carga(i, 'ha')));
+    return row('Rooms / Houseman', days.map(i => carga(i, 'ha')));
   return '';
 }
 
@@ -1758,7 +1758,7 @@ function renderScheduleTable() {
 
   // Head
   let html = `<thead><tr>
-    <th class="col-name">Empleado</th>
+    <th class="col-name">Employee</th>
     ${days.map(d => `<th>${d.label}</th>`).join('')}
   </tr></thead><tbody>`;
 
@@ -1773,7 +1773,7 @@ function renderScheduleTable() {
       html += `<tr class="emp-row">
         <td class="col-name-td"><div class="name-cell">
           <span>${emp.name}</span>
-          <button class="row-gear" title="Preferencias / Vacaciones"
+          <button class="row-gear" title="Preferences / Vacation"
             onclick="event.stopPropagation(); openPrefsModal('${emp.id}','${esc(emp.name)}')">⚙</button>
         </div></td>
         ${days.map((d, i) => {
@@ -1860,7 +1860,7 @@ function onDueoutsChange(idx, val) {
 }
 
 function clearSchedule() {
-  if (!confirm('¿Limpiar todo el horario? (Los cuartos vendidos y la Libreta Compartida se mantendrán)')) return;
+  if (!confirm('Clear the entire schedule? (Rooms sold and the Shared Notebook will be kept)')) return;
   state.schedule = {};
   state.requests = [];
   state.libCells = {};
@@ -1869,7 +1869,7 @@ function clearSchedule() {
   renderLaborGrid();
   renderRequests();
   libSyncSchedule();     // re-place granted Libreta R-OFF / FLEX / VAC cells
-  toast('Horario limpiado');
+  toast('Schedule cleared');
 }
 
 // ═══════════════════════════════════════════
@@ -1935,8 +1935,8 @@ function buildLibretaAlerts() {
     if (hitDays.length) {
       alerts.push({
         level: 'conflict',
-        title: `${c.position} sin cobertura`,
-        sub: `${c.members.map(empName).join(', ')} libres el mismo día · ${hitDays.join(', ')}`,
+        title: `${c.position} uncovered`,
+        sub: `${c.members.map(empName).join(', ')} off the same day · ${hitDays.join(', ')}`,
       });
     }
   });
@@ -1953,8 +1953,8 @@ function buildLibretaAlerts() {
     if (low.length) {
       alerts.push({
         level: 'warn',
-        title: `${dept.label} bajo el mínimo (${min})`,
-        sub: `Disponibles — ${low.join(' · ')}`,
+        title: `${dept.label} below minimum (${min})`,
+        sub: `Available — ${low.join(' · ')}`,
       });
     }
   });
@@ -1975,7 +1975,7 @@ function renderLibretaAlerts() {
 }
 
 // ═══════════════════════════════════════════
-//  PHASE 5 · REVIEW PANEL (posiciones cortas)
+//  PHASE 5 · REVIEW PANEL (short positions)
 // ═══════════════════════════════════════════
 
 // Consolidated shortage check on the GENERATED schedule: per tracked position,
@@ -1991,8 +1991,8 @@ function buildShortPositions() {
   const POS = [
     { pos: 'RA',           key: 'ra',       need: needs.ra },
     { pos: 'Houseman',     key: 'ha',       need: needs.hp,  deptId: 'houseperson' },
-    { pos: 'Supervisores', key: 'sup',      need: needs.sup, deptId: 'supervisors' },
-    { pos: 'Lavandería',   key: 'laundry',  need: needs.laundry },
+    { pos: 'Supervisors',  key: 'sup',      need: needs.sup, deptId: 'supervisors' },
+    { pos: 'Laundry',      key: 'laundry',  need: needs.laundry },
     { pos: 'Turndown',     key: 'turndown', need: needs.td },
   ];
   const shorts = [];
@@ -2016,17 +2016,17 @@ function renderExceptionsPanel() {
   if (!box) return;
   const shorts = buildShortPositions();
   if (shorts === null) { box.innerHTML = ''; return; }   // nothing generated yet
-  const head = `<div class="exc-head">Revisión · Posiciones cortas</div>`;
+  const head = `<div class="exc-head">Review · Short positions</div>`;
   if (!shorts.length) {
     box.innerHTML = head +
       `<div class="exc-ok"><span class="lib-ico">✅</span>
-        <span>Todas las posiciones cubren la necesidad del día.</span></div>`;
+        <span>All positions cover the day's need.</span></div>`;
     return;
   }
   box.innerHTML = head + shorts.map(s => `
     <div class="lib-alert warn">
       <span class="lib-ico">⚠</span>
-      <span class="lib-body"><b>${s.pos} bajo lo necesario</b>
+      <span class="lib-body"><b>${s.pos} below required</b>
         <span class="lib-sub">${s.hits.join(' · ')}</span></span>
     </div>`).join('');
 }
@@ -2040,7 +2040,7 @@ function renderExceptionsPanel() {
 const ALIAS_PEOPLE = [
   { name:'Gabriela C', primaryId:'ra_gabriela_c', primaryDept:'ra',          coverId:'lby_gabriela', coverShift:'7a-3:30p',      titularId:'lby_maria_m',    coverLabel:'Lobby AM'    },
   { name:'Andrea',     primaryId:'td_andrea',     primaryDept:'turndown',    coverId:'lby_andrea',   coverShift:'2:30p-10:45p', titularId:'lby_sarahi',     coverLabel:'Lobby PM'    },
-  { name:'Jorge G',    primaryId:'hp_jorge_g',    primaryDept:'houseperson', coverId:'lnd_jorge',    coverShift:'8:15a-4:45p',   titularId:'lnd_victoriano', coverLabel:'Lavandería'  },
+  { name:'Jorge G',    primaryId:'hp_jorge_g',    primaryDept:'houseperson', coverId:'lnd_jorge',    coverShift:'8:15a-4:45p',   titularId:'lnd_victoriano', coverLabel:'Laundry'     },
 ];
 const ALIAS_IDS = ALIAS_PEOPLE.flatMap(p => [p.primaryId, p.coverId]);
 
@@ -2053,7 +2053,7 @@ const LOBBY_SHIFT = {
   lby_sarahi:  '2:30p-10:45p', lby_guadalupe: '2:30p-10:45p',
 };
 function standardShift(deptId, id, dayIdx) {
-  const weekend = dayIdx === 0 || dayIdx === 1;   // Sáb, Dom
+  const weekend = dayIdx === 0 || dayIdx === 1;   // Sat, Sun
   switch (deptId) {
     case 'supervisors': return weekend ? '9:30a-6p' : '8:30a-5p';
     case 'ra':          return weekend ? '9a-5:30p' : '8:15a-4:45p';
@@ -2311,9 +2311,9 @@ function clearAutoFillCells() {
 }
 
 function autoFill() {
-  if (!state.weekStart) { toast('Primero selecciona la semana'); return; }
-  if (!state.rooms.some(r => r > 0)) { toast('Primero ingresa los cuartos vendidos'); return; }
-  if (!confirm('¿Generar el horario automáticamente? Se conservan los R-OFF de la libreta y las vacaciones; el resto se reemplaza.')) return;
+  if (!state.weekStart) { toast('First select the week'); return; }
+  if (!state.rooms.some(r => r > 0)) { toast('First enter the rooms sold'); return; }
+  if (!confirm('Generate the schedule automatically? The notebook R-OFFs and vacations are kept; everything else is replaced.')) return;
 
   const needs = computeNeeds();
   clearAutoFillCells();
@@ -2336,7 +2336,7 @@ function autoFill() {
   saveState();
   render();
   libSyncSchedule();     // re-assert notebook grants on top of the fresh auto-fill
-  toast('Horario generado automáticamente');
+  toast('Schedule generated automatically');
 }
 
 function renderReqForm() {
@@ -2367,7 +2367,7 @@ function toggleReqDay(i) {
 function addRequest() {
   const empId = document.getElementById('req-emp').value;
   if (!empId) return;
-  if (reqSelectedDays.length === 0) { toast('Selecciona al menos un día'); return; }
+  if (reqSelectedDays.length === 0) { toast('Select at least one day'); return; }
 
   // Merge with existing request for this employee if any
   let req = state.requests.find(r => r.empId === empId);
@@ -2390,7 +2390,7 @@ function addRequest() {
   renderLaborGrid();
 
   const emp = empById(empId);
-  toast(`R-OFF agregado: ${emp ? emp.name : ''}`);
+  toast(`R-OFF added: ${emp ? emp.name : ''}`);
 }
 
 function removeRequest(empId) {
@@ -2406,7 +2406,7 @@ function removeRequest(empId) {
   renderRequests();
   renderScheduleTable();
   renderLaborGrid();
-  toast('Request eliminado');
+  toast('Request removed');
 }
 
 function renderRequests() {
@@ -2418,7 +2418,7 @@ function renderRequests() {
     count === 1 ? '1 request' : `${count} requests`;
 
   if (count === 0) {
-    list.innerHTML = `<div class="req-empty">La libreta está vacía — agrega los días que pidieron los empleados</div>`;
+    list.innerHTML = `<div class="req-empty">The notebook is empty — add the days employees requested</div>`;
     return;
   }
 
@@ -2433,7 +2433,7 @@ function renderRequests() {
       <div class="req-item-days">
         ${r.days.map(d => `<span class="req-day-tag">${days[d].short}</span>`).join('')}
       </div>
-      <button class="req-del" onclick="removeRequest('${r.empId}')" title="Eliminar">✕</button>
+      <button class="req-del" onclick="removeRequest('${r.empId}')" title="Delete">✕</button>
     </div>`;
   }).join('');
 }
@@ -2493,13 +2493,13 @@ function onOverlayClick(e) {
 let prefsCtx = null;
 
 const OFFSTYLE_OPTS = [
-  { v:'together',  label:'Juntos' },
-  { v:'separated', label:'Separados' },
+  { v:'together',  label:'Together' },
+  { v:'separated', label:'Separate' },
 ];
 const WEEKENDPREF_OPTS = [
-  { v:'indifferent', label:'Indiferente' },
-  { v:'preferOff',   label:'Prefiere libre' },
-  { v:'preferWork',  label:'Prefiere trabajar' },
+  { v:'indifferent', label:'No preference' },
+  { v:'preferOff',   label:'Prefers off' },
+  { v:'preferWork',  label:'Prefers to work' },
 ];
 
 function currentPrefs(empId) {
@@ -2568,13 +2568,13 @@ function renderVacTab() {
   const ranges = state.vacations[prefsCtx.empId] || [];
   const list = document.getElementById('vac-list');
   if (!ranges.length) {
-    list.innerHTML = `<div class="vac-empty">Sin vacaciones registradas</div>`;
+    list.innerHTML = `<div class="vac-empty">No vacations recorded</div>`;
     return;
   }
   list.innerHTML = ranges.map((r, idx) => `
     <div class="vac-item">
       <span>${r.start} → ${r.end}</span>
-      <button class="req-del" onclick="removeVacationRange(${idx})" title="Eliminar">✕</button>
+      <button class="req-del" onclick="removeVacationRange(${idx})" title="Delete">✕</button>
     </div>
   `).join('');
 }
@@ -2583,8 +2583,8 @@ function addVacationRange() {
   const empId = prefsCtx.empId;
   const start = document.getElementById('vac-start').value;
   const end   = document.getElementById('vac-end').value;
-  if (!start || !end) { toast('Selecciona ambas fechas'); return; }
-  if (end < start) { toast('La fecha final debe ser después del inicio'); return; }
+  if (!start || !end) { toast('Select both dates'); return; }
+  if (end < start) { toast('The end date must be after the start'); return; }
 
   if (!state.vacations[empId]) state.vacations[empId] = [];
   state.vacations[empId].push({ start, end });
@@ -2596,7 +2596,7 @@ function addVacationRange() {
   renderVacTab();
   renderScheduleTable();
   renderLaborGrid();
-  toast('Vacaciones agregadas');
+  toast('Vacation added');
 }
 
 function removeVacationRange(idx) {
@@ -2676,7 +2676,7 @@ async function exportExcel() {
 
   // Title block
   ws.addRow(['', '', '', '', 'Weekly Schedule']).getCell(5).font = { bold: true, size: 16 };
-  ws.addRow(['', '', '', '', 'JW Marriott Houston']).getCell(5).font = { bold: true, size: 12 };
+  ws.addRow(['', '', '', '', 'Housekeeping']).getCell(5).font = { bold: true, size: 12 };
   ws.addRow([]);
 
   if (state.weekStart) {
@@ -2753,7 +2753,7 @@ async function exportExcel() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast(`Exportado: ${fname}`);
+  toast(`Exported: ${fname}`);
 }
 
 // ═══════════════════════════════════════════
@@ -2829,8 +2829,8 @@ init();
     .filter(d => d.id !== 'management')
     .flatMap(d => d.members.map(m => ({ name: m.name, dept: d.label })));
 
-  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const HK_DAYS = ['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'];
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const HK_DAYS = ['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
 
   let entries = [];
   let selectedName = null, selectedDept = null;
@@ -2852,11 +2852,11 @@ init();
     return out;
   }
   // Snap any date back to the Saturday that opens its hotel week (Sat–Fri).
-  // Keeps the HK grid's hardcoded Sáb/Dom/… labels correct even if state.weekStart
+  // Keeps the HK grid's hardcoded Sat/Sun/… labels correct even if state.weekStart
   // is misaligned (the day picker doesn't force a Saturday).
   function saturdayOf(iso){ const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 1) % 7)); return isoOf(d); }
   function recentSaturday(){ return saturdayOf(todayIso()); }
-  function fmtDate(iso){ return new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'short', month:'short', day:'numeric'}); }
+  function fmtDate(iso){ return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}); }
   function fmtStamp(ts){
     if (!ts) return '';
     const d = new Date(ts); if (isNaN(d)) return String(ts);
@@ -2865,10 +2865,10 @@ init();
   }
   function rangeLabel(dates){
     if (!dates || !dates.length) return '';
-    const f = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {month:'short', day:'numeric'});
+    const f = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return dates.length === 1 ? f(dates[0]) : `${f(dates[0])} – ${f(dates[dates.length - 1])}`;
   }
-  function typeLabel(t){ return t === 'roff' ? 'R-OFF' : t === 'flex' ? 'FLEX' : 'VACACIONES'; }
+  function typeLabel(t){ return t === 'roff' ? 'R-OFF' : t === 'flex' ? 'FLEX' : 'VACATION'; }
   function typeAbbrev(t){ return t === 'roff' ? 'R-OFF' : t === 'flex' ? 'FLEX' : 'VAC'; }
   function firstName(name){ return String(name || '').split(' ')[0]; }
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -2987,10 +2987,10 @@ init();
     const early   = earlyWarnings(selectedName, selectedDept, dates);
     let html = '';
     cascade.forEach(c => {
-      html += `<div class="lib-alert danger"><b>Conflicto de cobertura</b>${esc(c.otherName)} ya tiene el ${esc(fmtDate(c.dateIso))} registrado. ${esc(selectedName)} es su única cobertura para ${esc(c.position)}.</div>`;
+      html += `<div class="lib-alert danger"><b>Coverage conflict</b>${esc(c.otherName)} already has ${esc(fmtDate(c.dateIso))} logged. ${esc(selectedName)} is their only cover for ${esc(c.position)}.</div>`;
     });
     early.forEach(w => {
-      html += `<div class="lib-alert info">${w.count} personas de ${esc(w.dept)} ya tienen el ${esc(fmtDate(w.dateIso))} registrado.</div>`;
+      html += `<div class="lib-alert info">${w.count} people from ${esc(w.dept)} already have ${esc(fmtDate(w.dateIso))} logged.</div>`;
     });
     box.innerHTML = html;
     box.classList.toggle('show', !!html);
@@ -3152,7 +3152,7 @@ init();
     refreshCaptureAlerts();
   }
 
-  // ── Type chips (R-OFF / Flex / Vacaciones) ──
+  // ── Type chips (R-OFF / Flex / Vacation) ──
   function wireTypeChips(){
     document.querySelectorAll('#view-libreta .lib-type-chip').forEach(c => {
       c.addEventListener('click', () => {
@@ -3171,22 +3171,22 @@ init();
   function addPickedDay(){
     const start = $('lib-day-picker').value;
     const endInput = $('lib-day-picker-end').value;
-    if (!start){ say('Selecciona al menos la fecha "Desde"'); return; }
+    if (!start){ say('Select at least the "From" date'); return; }
     const end = endInput || start;
-    if (new Date(end) < new Date(start)){ say('"Hasta" no puede ser antes que "Desde"'); return; }
+    if (new Date(end) < new Date(start)){ say('"To" cannot be before "From"'); return; }
     const newDates = rangeDates(start, end).filter(d => !pickedDates.includes(d));
-    if (!newDates.length){ say('Esos días ya están agregados'); return; }
+    if (!newDates.length){ say('Those days are already added'); return; }
     pickedDates.push(...newDates); pickedDates.sort();
     renderPickedDays();
     $('lib-day-picker').value = ''; $('lib-day-picker-end').value = '';
-    if (newDates.length > 1) say(`${newDates.length} días agregados de una vez`);
+    if (newDates.length > 1) say(`${newDates.length} days added at once`);
     refreshCaptureAlerts();
   }
   function removePickedDay(iso){ pickedDates = pickedDates.filter(d => d !== iso); renderPickedDays(); refreshCaptureAlerts(); }
   function renderPickedDays(){
     const el = $('lib-picked-days'); if (!el) return;
     el.innerHTML = pickedDates.map(iso => {
-      const label = new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'short', day:'numeric', month:'short'});
+      const label = new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', day:'numeric', month:'short'});
       return `<div class="lib-day-chip picked">${label}<span class="rm" onclick="LB.removePickedDay('${iso}')">✕</span></div>`;
     }).join('');
   }
@@ -3194,16 +3194,16 @@ init();
   // ── Submit → cascade gate (4.1) → insert into notebook_requests as pending ──
   async function submitEntry(){
     const armed = confirmArmed; confirmArmed = false;   // override lasts one call only
-    if (!selectedName){ say('Busca y selecciona un empleado'); return; }
-    if (!hasDB()){ say('Sin conexión — intenta de nuevo'); return; }
+    if (!selectedName){ say('Search and select an employee'); return; }
+    if (!hasDB()){ say('Offline — try again'); return; }
     let dates;
     if (selectedType === 'vac'){
       const s = $('lib-vac-start').value, e = $('lib-vac-end').value;
-      if (!s || !e){ say('Selecciona el rango de fechas'); return; }
-      if (new Date(e) < new Date(s)){ say('El fin no puede ser antes del inicio'); return; }
+      if (!s || !e){ say('Select the date range'); return; }
+      if (new Date(e) < new Date(s)){ say('The end cannot be before the start'); return; }
       dates = rangeDates(s, e);
     } else {
-      if (!pickedDates.length){ say('Agrega al menos un día'); return; }
+      if (!pickedDates.length){ say('Add at least one day'); return; }
       dates = [...pickedDates];
     }
     // 4.1 · a cover-cascade conflict blocks until the manager confirms override.
@@ -3215,17 +3215,17 @@ init();
     refreshCaptureAlerts();   // make sure the amber conflict rows are visible
     const bar = document.createElement('div');
     bar.className = 'lib-alert-confirm';
-    bar.innerHTML = '<span>¿Continuar de todas formas?</span>' +
+    bar.innerHTML = '<span>Continue anyway?</span>' +
       '<div class="lib-alert-btns">' +
-      '<button type="button" class="lib-alert-btn ghost" onclick="LB.cancelSubmit()">Cancelar</button>' +
-      '<button type="button" class="lib-alert-btn solid" onclick="LB.confirmSubmit()">Sí, continuar</button>' +
+      '<button type="button" class="lib-alert-btn ghost" onclick="LB.cancelSubmit()">Cancel</button>' +
+      '<button type="button" class="lib-alert-btn solid" onclick="LB.confirmSubmit()">Yes, continue</button>' +
       '</div>';
     box.appendChild(bar);
     box.classList.add('show');
     if (bar.scrollIntoView) bar.scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
   function confirmSubmit(){ confirmArmed = true; submitEntry(); }
-  function cancelSubmit(){ confirmArmed = false; refreshCaptureAlerts(); say('Captura cancelada'); }
+  function cancelSubmit(){ confirmArmed = false; refreshCaptureAlerts(); say('Entry canceled'); }
   async function performInsert(dates){
     const who = $('lib-whoami-select').value;
     const row = {
@@ -3235,12 +3235,12 @@ init();
     try {
       const { error } = await sbClient.from('notebook_requests').insert(row);
       if (error) throw error;
-    } catch (e) { console.warn('[libreta] insert failed:', e.message || e); say('Error al guardar la petición'); return; }
+    } catch (e) { console.warn('[libreta] insert failed:', e.message || e); say('Error saving the request'); return; }
     pickedDates = []; renderPickedDays();
     if (selectedType === 'vac'){ $('lib-vac-start').value = ''; $('lib-vac-end').value = ''; }
     clearEmp();
     const box = $('lib-capture-alerts'); if (box){ box.innerHTML = ''; box.classList.remove('show'); }
-    say('Petición guardada — visible para los 4 al instante');
+    say('Request saved — visible to all 4 instantly');
     loadEntries();
   }
 
@@ -3248,10 +3248,10 @@ init();
   function entryCard(en){
     const daysTxt = en.type === 'vac' ? rangeLabel(en.dates) : en.dates.map(fmtDate).join(', ');
     const statusHtml = en.status === 'granted'
-      ? `<span class="lib-status-pill lib-status-granted">Otorgado por ${esc(en.decidedBy || '')}</span>`
+      ? `<span class="lib-status-pill lib-status-granted">Granted by ${esc(en.decidedBy || '')}</span>`
       : en.status === 'denied'
-        ? `<span class="lib-status-pill lib-status-denied">Negado por ${esc(en.decidedBy || '')}</span>`
-        : `<span class="lib-status-pill lib-status-pending">Pendiente de decisión</span>`;
+        ? `<span class="lib-status-pill lib-status-denied">Denied by ${esc(en.decidedBy || '')}</span>`
+        : `<span class="lib-status-pill lib-status-pending">Pending decision</span>`;
     return `<div class="lib-entry ${en.type}">
       <span class="lib-entry-badge">${typeLabel(en.type)}</span>
       <div class="lib-entry-body">
@@ -3263,7 +3263,7 @@ init();
     </div>`;
   }
 
-  // ── Semana HK (Sat–Fri expanded grid) ──
+  // ── HK Week (Sat–Fri expanded grid) ──
   function nameFontSize(name){
     const len = name.length;
     if (len <= 5)  return 9.5;
@@ -3283,8 +3283,8 @@ init();
     if (!hkWeekStart) hkWeekStart = recentSaturday();
     const start = new Date(hkWeekStart + 'T12:00:00');
     const end = new Date(start); end.setDate(start.getDate() + 6);
-    const fmt = d => d.toLocaleDateString('es-US', {day:'numeric', month:'short'});
-    $('lib-hk-title').textContent = `Sáb ${fmt(start)} – Vie ${fmt(end)}`;
+    const fmt = d => d.toLocaleDateString('en-US', {day:'numeric', month:'short'});
+    $('lib-hk-title').textContent = `Sat ${fmt(start)} – Fri ${fmt(end)}`;
     const t = todayIso();
     let html = '';
     for (let i = 0; i < 7; i++){
@@ -3325,7 +3325,7 @@ init();
       cells += `<div class="lib-cal-cell ${iso === t ? 'today' : ''}" onclick="LB.openDaySheet('${iso}')">
         <div class="lib-cal-cell-num">${day}</div>
         <div class="lib-cal-cell-entries">${tags}</div>
-        ${dayEntries.length > MAX ? `<div class="lib-cal-cell-more">+${dayEntries.length - MAX} más</div>` : ''}
+        ${dayEntries.length > MAX ? `<div class="lib-cal-cell-more">+${dayEntries.length - MAX} more</div>` : ''}
       </div>`;
     }
     grid.innerHTML = cells;
@@ -3335,11 +3335,11 @@ init();
   function openDaySheet(iso){
     sheetIso = iso;
     const dayEntries = entriesForDate(iso);
-    const label = new Date(iso + 'T12:00:00').toLocaleDateString('es-US', {weekday:'long', day:'numeric', month:'long'});
+    const label = new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long'});
     $('lib-sheet-title').textContent = label.charAt(0).toUpperCase() + label.slice(1);
     $('lib-sheet-entries').innerHTML = dayEntries.length
       ? dayEntries.map(entryCard).join('')
-      : `<div class="lib-empty">Sin peticiones este día.</div>`;
+      : `<div class="lib-empty">No requests this day.</div>`;
     $('lib-sheet-overlay').classList.add('show');
   }
   function closeSheet(){ sheetIso = null; $('lib-sheet-overlay').classList.remove('show'); }
