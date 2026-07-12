@@ -2111,6 +2111,14 @@ function writeOff(id, i) {
 // Give each member `offCount` days off, placing the discretionary ones on the
 // highest-surplus days (working − need). Honors weekendPref; nudges toward
 // consecutive off-days as a tiebreak. Processing members in order staggers them.
+//
+// The per-person greedy pass above has no look-ahead: it can leave a real day
+// short of its need even when the week has plenty of slack overall, simply
+// because of the order people were processed in (whoever goes first "claims"
+// slack that a later person's day actually needed). The repair pass below
+// runs once after everyone has an initial assignment and closes any such gap
+// by reassigning already-scheduled discretionary off-days — never touching
+// R-OFF/VAC — whenever a valid reassignment exists. See repairShortfalls().
 function scheduleDept(deptId, memberIds, need, offCount) {
   const days = [0,1,2,3,4,5,6];
   const needNum = i => {
@@ -2150,6 +2158,60 @@ function scheduleDept(deptId, memberIds, need, offCount) {
     }
     days.forEach(i => { if (off.has(i)) writeOff(id, i); else writeWork(deptId, id, i); });
   });
+
+  repairShortfalls(deptId, memberIds, days, needNum, working);
+}
+
+// Closes any remaining need shortfall left by scheduleDept's per-person
+// greedy pass, by chaining discretionary off-day swaps (never R-OFF/VAC).
+//
+// For a short day `i`, we look for someone off that day who could work it
+// instead — but they must give up a different day in exchange (everyone
+// keeps the same total off-days). If their other off-days are all already
+// at their own floor, we look for someone ELSE who could free up one of
+// those days the same way, and so on: a chain of swaps, each one moving a
+// single person's *existing* off-day to a day that currently has spare
+// capacity. Every swap in the chain nets to zero everywhere except the
+// first day (fixed, +1) and the last (donates its spare capacity, -1) — no
+// step can create a new shortfall, so this can only ever help, never hurt.
+// Breadth-first search finds the shortest such chain when one exists; if
+// none exists, every option is already at its floor and the gap is a
+// genuine staffing shortage that no reassignment can fix — it's left as-is,
+// same as before this fix.
+function repairShortfalls(deptId, memberIds, days, needNum, working) {
+  let guard = 0;
+  for (let i = 0; i < 7; i++) {
+    while (working[i] < needNum(i) && guard++ < 300) {
+      const cameFrom = {};
+      const visited = new Set([i]);
+      const queue = [i];
+      let target = -1;
+      while (queue.length && target === -1) {
+        const d = queue.shift();
+        for (const id of memberIds) {
+          if (isFixedOff(id, d) || !isOffCell(id, d)) continue; // need id OFF on d
+          for (const dPrime of days) {
+            if (dPrime === d || visited.has(dPrime)) continue;
+            if (isFixedOff(id, dPrime) || isOffCell(id, dPrime)) continue; // need id WORKING on d'
+            visited.add(dPrime);
+            cameFrom[dPrime] = { prevDay: d, id };
+            if (working[dPrime] - 1 >= needNum(dPrime)) { target = dPrime; break; }
+            queue.push(dPrime);
+          }
+          if (target !== -1) break;
+        }
+      }
+      if (target === -1) break; // no valid reassignment left; genuine shortfall
+      for (let d = target; d !== i; ) {
+        const { prevDay, id } = cameFrom[d];
+        writeWork(deptId, id, prevDay);
+        writeOff(id, d);
+        d = prevDay;
+      }
+      working[i]++;
+      working[target]--;
+    }
+  }
 }
 
 // Overnight is a mutual pair; apply the fixed default off pattern.
