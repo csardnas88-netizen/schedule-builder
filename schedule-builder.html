@@ -1344,22 +1344,18 @@ const DEPARTMENTS = [
       {id:'ra_maria_n',       name:'Maria N'},
       {id:'ra_hermelinda_n',  name:'Hermelinda N'},
       {id:'ra_gabriela_c',    name:'Gabriela C'},
-      {id:'ra_florencia_m',   name:'Florencia M'},
       {id:'ra_santa_elena_d', name:'Santa Elena D'},
       {id:'ra_heidy_a',       name:'Heidy A'},
       {id:'ra_debora_t',      name:'Debora T'},
       {id:'ra_jazmy_b',       name:'Jazmy B'},
       {id:'ra_sandy_b',       name:'Sandy B'},
       {id:'ra_luisa_y',       name:'Luisa Y'},
-      {id:'ra_olga_y',        name:'Olga Y'},
       {id:'ra_julia_s',       name:'Julia S'},
       {id:'ra_rosario_p',     name:'Rosario P'},
       {id:'ra_candy',         name:'Candy'},
       {id:'ra_sandra_s',      name:'Sandra S'},
       {id:'ra_abby_rosa',     name:'Abby Rosa'},
       {id:'ra_maria_ag',      name:'Maria Aguilar'},
-      {id:'ra_rubia',         name:'Rubia'},
-      {id:'ra_julia',         name:'Julia'},
     ]
   },
   {
@@ -2213,10 +2209,12 @@ function applyAliasCascades() {
   });
 }
 
-// If houseperson coverage is short of need, pull Rubia then Julia from RA.
+// If houseperson coverage is short of need, pull Rubia T then Julia S from
+// their own RA shift (overrides their RA assignment for that day; no separate
+// phantom roster row needed).
 function applyHpOverflow() {
   const hp = computeNeeds().hp;
-  const backups = ['ra_rubia', 'ra_julia'];
+  const backups = ['ra_rubia_t', 'ra_julia_s'];
   for (let i = 0; i < 7; i++) {
     const need = hp[i] === 'ALL' ? deptSize('houseperson') : hp[i];
     let bi = 0;
