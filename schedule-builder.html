@@ -1600,6 +1600,29 @@ function deptSize(id) {
   return d ? d.members.length : 0;
 }
 
+// Sort members oldest-hire-first using state.seniority (YYYY-MM-DD strings sort
+// correctly as plain strings). No recorded date sorts LAST (treated as most
+// junior until someone fills in their Seniority date — never jumps the line).
+// Array.prototype.sort is stable, so members tied on date (or both undated)
+// keep their original DEPARTMENTS array order — this is Carlos's confirmed
+// tiebreak for the 2024-11-01 opening-day cohort.
+function seniorityOrder(members) {
+  return members.slice().sort((a, b) => {
+    const da = state.seniority[a.id] || null;
+    const db = state.seniority[b.id] || null;
+    if (da && db) return da < db ? -1 : da > db ? 1 : 0;
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    return 0;
+  });
+}
+
+// Management is 100% manual and never participates in seniority tracking/order.
+// Every other department is displayed/processed oldest-hire-first.
+function orderedMembers(dept) {
+  return dept.id === 'management' ? dept.members : seniorityOrder(dept.members);
+}
+
 // Per-day operational needs for every position the grid tracks.
 function computeNeeds() {
   const out = { ra: [], raScore: [], raFlag: [], sup: [], hp: [], td: [], laundry: [] };
@@ -1765,7 +1788,7 @@ function renderScheduleTable() {
       <td class="col-name-td" colspan="8">${dept.label}</td>
     </tr>`;
     html += deptContextRows(dept.id, working);
-    dept.members.forEach(emp => {
+    orderedMembers(dept).forEach(emp => {
       html += `<tr class="emp-row">
         <td class="col-name-td"><div class="name-cell">
           <span>${emp.name}</span>
@@ -2064,7 +2087,7 @@ function standardShift(deptId, id, dayIdx) {
 
 function deptMemberIds(id, exclude) {
   const d = DEPARTMENTS.find(x => x.id === id);
-  return d ? d.members.map(m => m.id).filter(x => !exclude.includes(x)) : [];
+  return d ? orderedMembers(d).map(m => m.id).filter(x => !exclude.includes(x)) : [];
 }
 
 // A day is a fixed off for this person if it's a granted request or vacation.
@@ -2617,6 +2640,7 @@ function openSeniorityModal() {
 
 function closeSeniorityModal() {
   document.getElementById('seniority-modal').style.display = 'none';
+  render();   // reflect any seniority edits in the main table's order
 }
 
 function onSeniorityOverlayClick(e) {
@@ -2628,7 +2652,7 @@ function renderSeniorityList() {
   const relevant = DEPARTMENTS.filter(d => d.id !== 'management');
   document.getElementById('seniority-list').innerHTML = relevant.map(dept => `
     <div class="seniority-dept">${dept.label}</div>
-    ${dept.members.map(emp => `
+    ${orderedMembers(dept).map(emp => `
       <div class="seniority-row">
         <span>${emp.name}</span>
         <input type="date" value="${state.seniority[emp.id] || ''}"
@@ -2642,6 +2666,7 @@ function onSeniorityChange(empId, val) {
   if (val) state.seniority[empId] = val;
   else delete state.seniority[empId];
   saveState();
+  renderSeniorityList();   // re-sort live: order is seniority-driven now
 }
 
 // ═══════════════════════════════════════════
@@ -2709,7 +2734,7 @@ async function exportExcel() {
       cell.alignment = { vertical: 'middle' };
     }
 
-    dept.members.forEach(emp => {
+    orderedMembers(dept).forEach(emp => {
       const cellsData = [];
       for (let i = 0; i < 7; i++) {
         let label = state.schedule[`${emp.id}_${i}`] || '';
