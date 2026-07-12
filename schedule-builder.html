@@ -514,6 +514,19 @@ body {
 .sync-badge.err    { background: #FCE8E6; color: #A62B1F; }
 .sync-badge.off    { background: #ECECEC; color: #777; }
 
+.version-banner {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: var(--gold-pale); color: var(--navy);
+  border-bottom: 1px solid var(--gold);
+  font-size: 13px; font-weight: 600;
+  padding: 9px 14px; text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.version-banner-actions { display: flex; align-items: center; gap: 8px; }
+.version-banner button { border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: inherit; }
+.version-banner .btn-reload  { background: var(--navy); color: var(--white); padding: 4px 12px; font-size: 12px; }
+.version-banner .btn-dismiss { background: transparent; color: var(--navy); font-size: 15px; padding: 2px 6px; line-height: 1; }
+
 /* ── COUNTER FOOTER (sticky bottom of table) ── */
 .counts-row td {
   background: var(--navy);
@@ -942,6 +955,16 @@ body {
 </style>
 </head>
 <body>
+
+<!-- VERSION-UPDATE BANNER: hidden unless checkVersion() finds a newer
+     version marker in Supabase than this page's own APP_VERSION. -->
+<div id="version-banner" class="version-banner" style="display:none">
+  <span>⬆ A new version of Schedule Builder is available.</span>
+  <div class="version-banner-actions">
+    <button class="btn-reload" onclick="location.reload()">Reload</button>
+    <button class="btn-dismiss" onclick="document.getElementById('version-banner').style.display='none'" title="Dismiss">✕</button>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header class="app-header">
@@ -1487,6 +1510,48 @@ async function syncInit() {
     pushState();               // seed the cloud with current local state
   } else {
     syncBadge('⚠ Offline (local)', 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
+//  VERSION-UPDATE CHECK
+//  APP_VERSION is baked into this HTML file. The `settings` table (shared,
+//  same Supabase project as everything else) holds a single row —
+//  key: 'schedule_builder_version', value: {version: 'x.y.z'} — that Carlos
+//  (or Claude, as the last step of pushing a new version to GitHub) bumps
+//  by hand. If that cloud value is ever numerically newer than this page's
+//  own APP_VERSION, show a dismissible banner so whoever has this open
+//  knows a newer version exists. Never blocks anything on failure — a
+//  broken/offline check just means no banner, same as today.
+// ═══════════════════════════════════════════
+const APP_VERSION = '1.0.0';
+
+// Numeric MAJOR.MINOR.PATCH compare: 1 if a>b, -1 if a<b, 0 if equal.
+// Missing/non-numeric parts count as 0, so odd or partial version strings
+// compare best-effort instead of throwing.
+function compareVersions(a, b) {
+  const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0, nb = pb[i] || 0;
+    if (na !== nb) return na > nb ? 1 : -1;
+  }
+  return 0;
+}
+
+async function checkVersion() {
+  if (!sbClient) return;
+  try {
+    const { data, error } = await sbClient
+      .from('settings').select('value').eq('key', 'schedule_builder_version').maybeSingle();
+    if (error) throw error;
+    const cloudVersion = data && data.value && data.value.version;
+    if (cloudVersion && compareVersions(cloudVersion, APP_VERSION) > 0) {
+      const banner = document.getElementById('version-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+  } catch (e) {
+    console.warn('[version] check failed:', e.message || e);
   }
 }
 
@@ -2962,6 +3027,7 @@ function init() {
   render();
   restoreView();       // apply last-used sidebar section (UI-local)
   syncInit();          // pull from cloud, then reconcile + re-render
+  checkVersion();      // silently flag if a newer version has been pushed
 }
 
 init();
