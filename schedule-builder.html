@@ -1865,8 +1865,11 @@ function esc(s) { return s.replace(/'/g, "\\'"); }
 // ═══════════════════════════════════════════
 
 function onWeekChange() {
-  const val = document.getElementById('week-start').value;
+  const input = document.getElementById('week-start');
+  const val = input.value;
   if (!val) return;
+
+  const prevWeekStart = state.weekStart;
 
   // Force Saturday
   const d = new Date(val + 'T12:00:00');
@@ -1874,9 +1877,24 @@ function onWeekChange() {
   if (dow !== 6) {
     const diff = (dow + 1) % 7;
     d.setDate(d.getDate() - diff);
-    document.getElementById('week-start').value = d.toISOString().split('T')[0];
+    input.value = d.toISOString().split('T')[0];
   }
-  state.weekStart = document.getElementById('week-start').value;
+  const newWeekStart = input.value;
+
+  // Nothing here is stored per calendar week (rooms/due-outs/schedule are all
+  // flat, keyed only by day-index or empId_dayIdx) — so switching to a
+  // genuinely different week would otherwise silently carry over the old
+  // week's room counts, due-outs, and full shift schedule with zero warning.
+  // Ask first; cancelling leaves everything untouched, including the picker.
+  if (prevWeekStart && prevWeekStart !== newWeekStart) {
+    const ok = confirm('¿Empezar la semana en blanco? Se borrarán cuartos, due-outs y horario (R-OFF/vacaciones se mantienen).');
+    if (!ok) { input.value = prevWeekStart; return; }
+    state.rooms   = [0,0,0,0,0,0,0];
+    state.dueouts = [0,0,0,0,0,0,0];
+    clearAutoFillCells();   // clears schedule + hpBackup; keeps R-OFF/VAC/FLEX
+  }
+
+  state.weekStart = newWeekStart;
 
   // Week label
   const start = new Date(state.weekStart + 'T12:00:00');
