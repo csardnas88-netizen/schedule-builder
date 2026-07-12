@@ -1476,8 +1476,8 @@ async function pullState() {
 }
 
 async function syncInit() {
-  if (!sbClient) { syncBadge('· Solo local', 'off'); return; }
-  syncBadge('☁ Cargando…', 'saving');
+  if (!sbClient) { syncBadge('· Local only', 'off'); return; }
+  syncBadge('☁ Loading…', 'saving');
   const status = await pullState();
   if (status === 'loaded') {
     applyWeekHeader();
