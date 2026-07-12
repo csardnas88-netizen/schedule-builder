@@ -653,6 +653,18 @@ body {
   flex-shrink: 0;
 }
 .row-gear:hover { opacity: 1; background: var(--cream-dark); color: var(--navy); }
+.pm-badge {
+  display: inline-block;
+  background: #EBF5FB;
+  color: #1A5276;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
 
 /* ── PREFERENCES / VACATIONS MODAL ── */
 .prefs-tabs {
@@ -1647,6 +1659,16 @@ function computeNeeds() {
   return out;
 }
 
+// Supervisors who work PM instead of the standard AM floor-supervision shift.
+// They shouldn't inflate "rooms per AM supervisor" coverage math (or any
+// AM-supervisor need/have comparison) UNLESS they're actually scheduled AM
+// that specific day — see countWorking() below and the PM badge in
+// renderScheduleTable(). Single source of truth so both stay in sync.
+const PM_SUPERVISOR_IDS = new Set(['sup_yanira']);
+function isAmSupervisorShift(shift) {
+  return shift === '9:30a-6p' || shift === '8:30a-5p';
+}
+
 // Count working staff per day (excludes OFF and R-OFF)
 function countWorking(dayIdx) {
   const counts = { ra:0, ha:0, sup:0, laundry:0, turndown:0, overnight:0, lobby:0 };
@@ -1660,7 +1682,12 @@ function countWorking(dayIdx) {
       if (dept.id === 'ra' && state.hpBackup[`${emp.id}_${dayIdx}`]) { counts.ha++; return; }
       if (dept.id === 'ra')          counts.ra++;
       else if (dept.id === 'houseperson') counts.ha++;
-      else if (dept.id === 'supervisors') counts.sup++;
+      else if (dept.id === 'supervisors') {
+        // PM supervisor (e.g. Yanira): only counts toward AM coverage on days
+        // she's genuinely scheduled AM (covering/swapped); otherwise excluded.
+        if (PM_SUPERVISOR_IDS.has(emp.id) && !isAmSupervisorShift(shift)) return;
+        counts.sup++;
+      }
       else if (dept.id === 'laundry')     counts.laundry++;
       else if (dept.id === 'turndown')    counts.turndown++;
       else if (dept.id === 'overnight')   counts.overnight++;
@@ -1791,7 +1818,7 @@ function renderScheduleTable() {
     orderedMembers(dept).forEach(emp => {
       html += `<tr class="emp-row">
         <td class="col-name-td"><div class="name-cell">
-          <span>${emp.name}</span>
+          <span>${emp.name}${PM_SUPERVISOR_IDS.has(emp.id) ? ' <span class="pm-badge" title="Turno PM — no cuenta para la cobertura de supervisor AM salvo que trabaje AM ese día">PM</span>' : ''}</span>
           <button class="row-gear" title="Preferences / Vacation"
             onclick="event.stopPropagation(); openPrefsModal('${emp.id}','${esc(emp.name)}')">⚙</button>
         </div></td>
