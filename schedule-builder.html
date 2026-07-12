@@ -1823,7 +1823,7 @@ function renderScheduleTable() {
     orderedMembers(dept).forEach(emp => {
       html += `<tr class="emp-row">
         <td class="col-name-td"><div class="name-cell">
-          <span>${emp.name}${PM_SUPERVISOR_IDS.has(emp.id) ? ' <span class="pm-badge" title="Turno PM — no cuenta para la cobertura de supervisor AM salvo que trabaje AM ese día">PM</span>' : ''}</span>
+          <span>${emp.name}${PM_SUPERVISOR_IDS.has(emp.id) ? ' <span class="pm-badge" title="PM shift — doesn\'t count toward AM supervisor coverage unless working AM that day">PM</span>' : ''}</span>
           <button class="row-gear" title="Preferences / Vacation"
             onclick="event.stopPropagation(); openPrefsModal('${emp.id}','${esc(emp.name)}')">⚙</button>
         </div></td>
@@ -1887,7 +1887,7 @@ function onWeekChange() {
   // week's room counts, due-outs, and full shift schedule with zero warning.
   // Ask first; cancelling leaves everything untouched, including the picker.
   if (prevWeekStart && prevWeekStart !== newWeekStart) {
-    const ok = confirm('¿Empezar la semana en blanco? Se borrarán cuartos, due-outs y horario (R-OFF/vacaciones se mantienen).');
+    const ok = confirm('Start the week blank? Rooms sold, due-outs, and the schedule will be cleared (R-OFF/vacation/flex will be kept).');
     if (!ok) { input.value = prevWeekStart; return; }
     state.rooms   = [0,0,0,0,0,0,0];
     state.dueouts = [0,0,0,0,0,0,0];
