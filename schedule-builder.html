@@ -2348,8 +2348,19 @@ function applyHpOverflow() {
 // day, if more people are working than the day needs, send the surplus home as
 // a normal OFF. Who gets cut rotates week-to-week (lowSeasonHistory); ties break
 // by LEAST seniority (most recent hire cut first; no hire date = protected).
-// Excludes management/overnight/lobby/turndown (fixed pairs or fragile covers)
-// and every alias person (their two rows are driven by the cover cascade).
+// Excludes management/overnight/lobby (fixed pairs) and every alias person
+// (their two rows are driven by the cover cascade).
+//
+// Turndown participates too, but with its own floor: the standard need
+// (turndownNeeded = ceil(rooms/48)) is the day-to-day staffing target, but this
+// trim is never allowed to cut turndown below ceil(rooms/TURNDOWN_FLOOR_ROOMS_PER_ATTENDANT)
+// — a gentler ratio kept as a safety margin so a slow week doesn't strip
+// turndown all the way down to the bare efficiency minimum. Whichever of the
+// two implies more people wins (see tdNeed below). Yesenia's Houseman-PM cover
+// (applyYesenia, run earlier) and whoever stands in for her that day both use
+// the '5p-11p HP' shift label — that's a fragile, hand-built arrangement, so
+// it's shielded from this trim the same way RA-lent-to-HP already is below.
+const TURNDOWN_FLOOR_ROOMS_PER_ATTENDANT = 38;
 function applyLowSeason() {
   const needs = computeNeeds();
   const week = state.weekStart;
@@ -2367,11 +2378,17 @@ function applyLowSeason() {
   };
   const hireDate = id => state.seniority[id] || null;
 
+  const tdNeed = needs.td.map((n, i) => {
+    const floor = Math.ceil((state.rooms[i] || 0) / TURNDOWN_FLOOR_ROOMS_PER_ATTENDANT);
+    return Math.max(n || 0, floor);
+  });
+
   const SPECS = [
-    { deptId: 'supervisors', countKey: 'sup',     need: needs.sup },
-    { deptId: 'laundry',     countKey: 'laundry', need: needs.laundry },
-    { deptId: 'ra',          countKey: 'ra',      need: needs.ra },
-    { deptId: 'houseperson', countKey: 'ha',      need: needs.hp },
+    { deptId: 'supervisors', countKey: 'sup',      need: needs.sup },
+    { deptId: 'laundry',     countKey: 'laundry',  need: needs.laundry },
+    { deptId: 'ra',          countKey: 'ra',       need: needs.ra },
+    { deptId: 'houseperson', countKey: 'ha',       need: needs.hp },
+    { deptId: 'turndown',    countKey: 'turndown', need: tdNeed },
   ];
 
   for (let i = 0; i < 7; i++) {
@@ -2386,6 +2403,7 @@ function applyLowSeason() {
         if (isOffCell(id, i)) return false;                 // already off
         if (state.hpBackup[`${id}_${i}`]) return false;     // RA lent to HP: keep
         const s = state.schedule[`${id}_${i}`] || '';
+        if (spec.deptId === 'turndown' && s === '5p-11p HP') return false; // Yesenia's HP cover (or her stand-in): keep
         return s && !s.startsWith('→');                     // must be a real working shift
       });
 
