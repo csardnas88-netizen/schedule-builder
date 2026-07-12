@@ -1768,10 +1768,15 @@ function renderLaborGrid() {
 }
 
 // Per-day workload context shown under the RA / Turndown / Supervisors /
-// Houseperson headers. "Load" = rooms that day ÷ people actually working that
-// day (from the precomputed `working` counts). RA also shows due-outs per RA
-// (how many of each RA's rooms are check-outs). The Turndown row = occupied
-// rooms that day (every occupied room gets turndown service).
+// Houseperson headers. RA and Turndown load = rooms that day ÷ people
+// actually working that day (from the precomputed `working` counts); RA
+// also shows due-outs per RA (how many of each RA's rooms are check-outs).
+// The Turndown row = occupied rooms that day (every occupied room gets
+// turndown service). Supervisors/Houseperson load = due-outs ÷ people
+// working — matches supHpNeeded(), which sizes both positions off due-outs,
+// not total rooms sold, so the displayed load reflects the same driver as
+// the generator's actual need calculation. Display-only: doesn't change
+// the generator, only what's shown under these two headers.
 function deptContextRows(deptId, working) {
   // Per-person split of a daily total; '·' when the day is out of play or no one
   // is working. A 0 total on an active day shows 0 (e.g. zero due-outs), not '·'.
@@ -1792,9 +1797,9 @@ function deptContextRows(deptId, working) {
     return row('Turndowns', days.map(i => state.rooms[i] || '·'))
          + row('Rooms / Turndown', days.map(i => carga(i, 'turndown')));
   if (deptId === 'supervisors')
-    return row('Rooms / Supervisor', days.map(i => carga(i, 'sup')));
+    return row('Due-outs / Supervisor', days.map(i => dueout(i, 'sup')));
   if (deptId === 'houseperson')
-    return row('Rooms / Houseman', days.map(i => carga(i, 'ha')));
+    return row('Due-outs / Houseman', days.map(i => dueout(i, 'ha')));
   return '';
 }
 
