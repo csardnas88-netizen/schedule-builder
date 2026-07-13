@@ -2223,6 +2223,16 @@ function writeOff(id, i) {
   state.schedule[`${id}_${i}`] = 'OFF';
 }
 
+// Integer week counter from a 'YYYY-MM-DD' weekStart (whole weeks since the
+// epoch). weekStart is always a Saturday and consecutive weeks are 7 days
+// apart, so this increments by exactly 1 each week — used to rotate off-day
+// placement week-to-week. Same weekStart always yields the same number, so
+// re-running Auto-fill on one week is idempotent.
+function weekIndexOf(ws) {
+  const ms = Date.parse((ws || '') + 'T00:00:00Z');
+  return Number.isNaN(ms) ? 0 : Math.floor(ms / 86400000 / 7);
+}
+
 // Order members by who is most overdue for a full Sat+Sun weekend off, from
 // state.weekendHistory (the weekStart of each person's last full weekend;
 // absent = never had one). Most overdue first; ties keep the caller's
@@ -2244,6 +2254,15 @@ function weekendDueOrder(memberIds) {
 // highest-surplus days (working − need). Honors weekendPref; nudges toward
 // consecutive off-days as a tiebreak. Processing members in order staggers them.
 //
+// Weekday rotation: when several days are equally good (same surplus, same
+// consecutive-adjacency), the choice used to always fall on the earliest day,
+// so the same person got e.g. Mon+Tue off every single week. Instead we now
+// pick around a per-person, per-week anchor = (weekIndex + memberIndex) mod 7,
+// so an individual's discretionary days rotate week-to-week and different
+// people spread across different days. Surplus still dominates, so coverage
+// is untouched; and the anchor is a pure function of the week, so re-running
+// the same week is idempotent.
+//
 // The per-person greedy pass above has no look-ahead: it can leave a real day
 // short of its need even when the week has plenty of slack overall, simply
 // because of the order people were processed in (whoever goes first "claims"
@@ -2258,6 +2277,7 @@ function scheduleDept(deptId, memberIds, need, offCount) {
     return v === 'ALL' ? memberIds.length : (v || 0);
   };
   const working = days.map(i => memberIds.filter(id => !isFixedOff(id, i)).length);
+  const wk = weekIndexOf(state.weekStart);
 
   // Weekend fairness: process whoever is most overdue for a full weekend first
   // (so scarce Sat/Sun slack goes to them), and bias that most-overdue half
@@ -2273,6 +2293,8 @@ function scheduleDept(deptId, memberIds, need, offCount) {
     const pref = (explicit === 'preferOff' || explicit === 'preferWork')
       ? explicit
       : (weekendGrant.has(id) ? 'preferOff' : 'indifferent');
+    // Per-person, per-week rotation anchor for the weekday tiebreak (below).
+    const anchor = (((wk + memberIds.indexOf(id)) % 7) + 7) % 7;
 
     let guard = 0;
     while (off.size < offCount && guard++ < 20) {
@@ -2284,15 +2306,21 @@ function scheduleDept(deptId, memberIds, need, offCount) {
       }
       cand.sort((a, b) => {
         if (pref === 'preferOff') {
-          const aw = (a === 0 || a === 1) ? 1 : 0, bw = (b === 0 || b === 1) ? 1 : 0;
-          if (aw !== bw) return bw - aw;              // weekend first
+          // Prefer a weekend day only while it still has surplus, so the most-
+          // overdue people (processed first) actually keep Sat+Sun instead of
+          // everyone piling on and repairShortfalls yanking the same seniors
+          // back off it every week.
+          const aw = ((a === 0 || a === 1) && working[a] - needNum(a) > 0) ? 1 : 0;
+          const bw = ((b === 0 || b === 1) && working[b] - needNum(b) > 0) ? 1 : 0;
+          if (aw !== bw) return bw - aw;              // weekend first (while it has room)
         }
         const sa = working[a] - needNum(a), sb = working[b] - needNum(b);
         if (sb !== sa) return sb - sa;                // higher surplus first
         const adjA = (off.has(a - 1) || off.has(a + 1)) ? 1 : 0;
         const adjB = (off.has(b - 1) || off.has(b + 1)) ? 1 : 0;
         if (adjA !== adjB) return adjB - adjA;        // consecutive nudge
-        return a - b;
+        const da = (a - anchor + 7) % 7, db = (b - anchor + 7) % 7;
+        return da - db;                               // rotate week-to-week (see header)
       });
       const pick = cand[0];
       off.add(pick);
