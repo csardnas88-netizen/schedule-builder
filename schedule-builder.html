@@ -2223,6 +2223,23 @@ function writeOff(id, i) {
   state.schedule[`${id}_${i}`] = 'OFF';
 }
 
+// Order members by who is most overdue for a full Sat+Sun weekend off, from
+// state.weekendHistory (the weekStart of each person's last full weekend;
+// absent = never had one). Most overdue first; ties keep the caller's
+// (seniority) order. A last-weekend equal to the CURRENT weekStart is treated
+// as "never" so re-running Auto-fill on the same week is idempotent — people
+// who got their weekend earlier in this same run aren't pushed to the back.
+function weekendDueOrder(memberIds) {
+  const key = id => {
+    const w = (state.weekendHistory || {})[id];
+    return (w && w !== state.weekStart) ? w : '';   // '' sorts first = most overdue
+  };
+  return memberIds
+    .map((id, idx) => ({ id, idx, k: key(id) }))
+    .sort((a, b) => (a.k !== b.k ? (a.k < b.k ? -1 : 1) : a.idx - b.idx))
+    .map(o => o.id);
+}
+
 // Give each member `offCount` days off, placing the discretionary ones on the
 // highest-surplus days (working − need). Honors weekendPref; nudges toward
 // consecutive off-days as a tiebreak. Processing members in order staggers them.
@@ -2242,10 +2259,20 @@ function scheduleDept(deptId, memberIds, need, offCount) {
   };
   const working = days.map(i => memberIds.filter(id => !isFixedOff(id, i)).length);
 
-  memberIds.forEach(id => {
+  // Weekend fairness: process whoever is most overdue for a full weekend first
+  // (so scarce Sat/Sun slack goes to them), and bias that most-overdue half
+  // toward taking the weekend off. It rotates as weekendHistory updates each
+  // week. An explicit weekendPref set in the gear menu always wins over this.
+  const order = weekendDueOrder(memberIds);
+  const weekendGrant = new Set(order.slice(0, Math.floor(order.length / 2)));
+
+  order.forEach(id => {
     const off = new Set();
     days.forEach(i => { if (isFixedOff(id, i)) off.add(i); });
-    const pref = (state.preferences[id] || {}).weekendPref || 'indifferent';
+    const explicit = (state.preferences[id] || {}).weekendPref;
+    const pref = (explicit === 'preferOff' || explicit === 'preferWork')
+      ? explicit
+      : (weekendGrant.has(id) ? 'preferOff' : 'indifferent');
 
     let guard = 0;
     while (off.size < offCount && guard++ < 20) {
@@ -2510,6 +2537,22 @@ function applyLowSeason() {
   }
 }
 
+// After a full generation, record who ended the week with BOTH Sat and Sun off
+// (any off type: OFF / R-OFF / VAC / vacation). weekendHistory[id] = this
+// weekStart feeds next week's weekendDueOrder so full weekends rotate fairly
+// across the team instead of landing on the same people every week.
+function updateWeekendHistory() {
+  if (!state.weekendHistory) state.weekendHistory = {};
+  DEPARTMENTS.forEach(dept => {
+    if (dept.id === 'management') return;   // management is 100% manual
+    dept.members.forEach(m => {
+      if (isOffCell(m.id, 0) && isOffCell(m.id, 1)) {
+        state.weekendHistory[m.id] = state.weekStart;
+      }
+    });
+  });
+}
+
 // Clear every auto-fillable cell (keep granted requests + vacations).
 function clearAutoFillCells() {
   state.hpBackup = {};
@@ -2548,6 +2591,7 @@ function autoFill() {
   applyAliasCascades();
   applyHpOverflow();
   applyLowSeason();
+  updateWeekendHistory();   // record full weekends granted → rotates next week
 
   saveState();
   render();
