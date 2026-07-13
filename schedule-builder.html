@@ -769,6 +769,99 @@ body {
 }
 .seniority-row input[type="date"]:focus { border-color: var(--gold); }
 
+/* ── STAFF EDITOR ── */
+.staff-add {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+.staff-add select, .staff-add input {
+  padding: 9px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: var(--cream);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.staff-add select:focus, .staff-add input:focus { border-color: var(--gold); }
+.staff-add .staff-add-name { grid-column: 1 / -1; }
+.staff-add-btn {
+  grid-column: 1 / -1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.staff-add-btn:hover { background: var(--navy-mid); }
+.staff-list { max-height: 44vh; overflow-y: auto; border-top: 1px solid var(--cream-dark); }
+.staff-dept {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--navy);
+  padding: 10px 4px 4px;
+}
+.staff-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-bottom: 1px solid var(--cream-dark);
+}
+.staff-row .staff-name {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: var(--cream);
+  color: var(--text);
+  outline: none;
+}
+.staff-row .staff-name:focus { border-color: var(--gold); }
+.staff-x {
+  border: none;
+  background: var(--red-pale);
+  color: var(--red);
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.staff-x:hover { background: var(--red); color: var(--white); }
+.staff-lock { font-size: 12px; opacity: 0.5; width: 30px; text-align: center; flex-shrink: 0; }
+.staff-removed-name { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+.staff-removed-name em { font-style: normal; opacity: 0.7; font-size: 11px; }
+.staff-restore {
+  border: none;
+  background: var(--gold-pale);
+  color: #8a6a12;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.staff-restore:hover { background: var(--gold); color: var(--white); }
+
 /* ── TOAST ── */
 .toast {
   position: fixed;
@@ -973,6 +1066,7 @@ body {
     <p>Housekeeping</p>
   </div>
   <div class="header-actions">
+    <button class="btn btn-ghost" onclick="openStaffModal()">👥 Staff</button>
     <button class="btn btn-ghost" onclick="openSeniorityModal()">📋 Seniority</button>
     <button class="btn btn-navy" onclick="autoFill()">⚡ Auto-fill</button>
     <button class="btn btn-ghost" onclick="clearSchedule()">🗑 Clear</button>
@@ -1216,6 +1310,25 @@ body {
   </div>
 </div>
 
+<!-- STAFF MODAL -->
+<div class="modal-overlay" id="staff-modal" style="display:none" onclick="onStaffOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-emp">Staff</div>
+    <div class="modal-day">Add, rename, or remove employees — changes flow into the schedule automatically</div>
+    <div class="modal-section-label">Add employee</div>
+    <div class="staff-add">
+      <input class="staff-add-name" id="staff-add-name" type="text" placeholder="Full name" autocomplete="off">
+      <select id="staff-add-dept"></select>
+      <input id="staff-add-date" type="date" title="Hire date (optional)">
+      <button class="staff-add-btn" onclick="addEmployee()">Add to roster</button>
+    </div>
+    <div class="staff-list" id="staff-list"></div>
+    <div id="staff-removed" style="display:none"></div>
+    <button class="modal-clear" onclick="closeStaffModal()">Close</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1301,7 +1414,7 @@ const VAC_SHIFT = { label:'VAC', exportLabel:'VAC', cls:'sc-vac' };
 // from R-OFF (both are days off, but the manager tracks them separately).
 const FLEX_SHIFT = { label:'FLEX', exportLabel:'FLEX', cls:'sc-flex' };
 
-const DEPARTMENTS = [
+const DEPARTMENTS_SEED = [
   {
     id: 'management', label: 'Management',
     members: [
@@ -1405,6 +1518,35 @@ const DEPARTMENTS = [
   },
 ];
 
+// The live roster = the pristine seed above + the manager's Staff-editor overlay
+// (state.roster: added people, name overrides, hidden ids). Everything reads the
+// DEPARTMENTS binding live, and render() rebuilds it first, so add/rename/remove
+// propagate everywhere without touching code. buildRoster() runs at render time,
+// after all the special-machinery constants (PROTECTED_IDS) exist.
+let DEPARTMENTS = DEPARTMENTS_SEED.map(d => ({ ...d, members: d.members.map(m => ({ ...m })) }));
+
+function buildRoster() {
+  const ov = state.roster || {};
+  const removed = new Set(ov.removed || []);
+  const renamed = ov.renamed || {};
+  const added = Array.isArray(ov.added) ? ov.added : [];
+  const protect = (typeof PROTECTED_IDS !== 'undefined') ? PROTECTED_IDS : new Set();
+  const depts = DEPARTMENTS_SEED.map(d => ({
+    ...d,
+    members: d.members
+      .filter(m => !removed.has(m.id) || protect.has(m.id))          // protected can't be hidden
+      .map(m => (renamed[m.id] ? { ...m, name: renamed[m.id] } : { ...m })),
+  }));
+  added.forEach(a => {
+    if (!a || !a.id || removed.has(a.id)) return;
+    const d = depts.find(x => x.id === a.deptId);
+    if (!d || d.members.some(m => m.id === a.id)) return;
+    d.members.push({ id: a.id, name: renamed[a.id] || a.name || a.id });
+  });
+  return depts;
+}
+function rebuildRoster() { DEPARTMENTS = buildRoster(); }
+
 // ═══════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════
@@ -1422,6 +1564,7 @@ let state = {
   weekendHistory:   {}, // { empId: 'YYYY-MM-DD' } last Sat+Sun both off
   hpBackup:         {}, // { `${empId}_${dayIdx}`: true } RA pulled to houseperson backup
   libCells:         {}, // { `${empId}_${dayIdx}`: 'R-OFF'|'FLEX'|'VAC' } cells the Libreta grant-sync wrote for the loaded week (so it can reconcile idempotently)
+  roster: { added: [], renamed: {}, removed: [] }, // Staff editor overlay on DEPARTMENTS_SEED: added:[{id,deptId,name}] · renamed:{id:name} · removed:[id]
 };
 
 function loadState() {
@@ -1429,6 +1572,7 @@ function loadState() {
     const s = localStorage.getItem('jwm_schedule_v1');
     if (s) state = { ...state, ...JSON.parse(s) };
   } catch(e) {}
+  rebuildRoster();   // apply the saved Staff-editor overlay before first render
 }
 function saveState() {
   try { localStorage.setItem('jwm_schedule_v1', JSON.stringify(state)); } catch(e) {}
@@ -1767,6 +1911,7 @@ function countWorking(dayIdx) {
 // ═══════════════════════════════════════════
 
 function render() {
+  rebuildRoster();          // reflect any Staff-editor add/rename/remove first
   renderRoomsGrid();
   renderLaborGrid();
   renderScheduleTable();
@@ -2186,6 +2331,20 @@ const LOBBY_SHIFT = {
   lby_maria_m: '7a-3:30p',    lby_yorlin:    '7a-3:30p',
   lby_sarahi:  '2:30p-10:45p', lby_guadalupe: '2:30p-10:45p',
 };
+
+// People woven into special scheduling machinery — aliases/cover cascades,
+// overnight pairs, the PM supervisor, Yesenia's Houseman-PM cover crew, the
+// HP-overflow backups, and fixed lobby shifts. The Staff editor lets them be
+// renamed but never removed: deleting one would leave autoFill referencing a
+// ghost id. New hires are always plain members, so they're never in this set.
+const PROTECTED_IDS = new Set([
+  ...PM_SUPERVISOR_IDS,
+  ...ALIAS_PEOPLE.flatMap(p => [p.primaryId, p.coverId, p.titularId]),
+  ...Object.keys(OVERNIGHT_DEFAULT_OFF),
+  ...Object.keys(LOBBY_SHIFT),
+  'td_yesenia_p', 'td_paty_c', 'td_yorlin_a',   // applyYesenia cover crew
+  'ra_rubia_t', 'ra_julia_s',                    // applyHpOverflow backups
+]);
 function standardShift(deptId, id, dayIdx) {
   const weekend = dayIdx === 0 || dayIdx === 1;   // Sat, Sun
   switch (deptId) {
@@ -2934,6 +3093,171 @@ function onSeniorityChange(empId, val) {
   else delete state.seniority[empId];
   saveState();
   renderSeniorityList();   // re-sort live: order is seniority-driven now
+}
+
+// ═══════════════════════════════════════════
+//  STAFF EDITOR  (roster add / rename / remove)
+//  All edits live in state.roster as an overlay on DEPARTMENTS_SEED;
+//  rebuildRoster() re-derives the live DEPARTMENTS so the schedule,
+//  seniority list, exports, and Semana view all pick up the change.
+// ═══════════════════════════════════════════
+
+// id → {name, deptId, deptLabel} for every original (seed) member.
+const SEED_INDEX = (() => {
+  const m = {};
+  DEPARTMENTS_SEED.forEach(d => d.members.forEach(mem => {
+    m[mem.id] = { name: mem.name, deptId: d.id, deptLabel: d.label };
+  }));
+  return m;
+})();
+
+function staffHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// Seed managers + special-machinery people are display-only: renamable but never removable.
+function isSeedManagement(id) { return !!(SEED_INDEX[id] && SEED_INDEX[id].deptId === 'management'); }
+function canRemoveStaff(id)   { return !PROTECTED_IDS.has(id) && !isSeedManagement(id); }
+
+function staffOriginalName(id) {
+  if (SEED_INDEX[id]) return SEED_INDEX[id].name;
+  const a = (state.roster.added || []).find(x => x && x.id === id);
+  return a ? a.name : id;
+}
+function staffDisplayName(id) {
+  return (state.roster.renamed && state.roster.renamed[id]) || staffOriginalName(id);
+}
+function staffKnownIds() {
+  const ids = new Set();
+  DEPARTMENTS_SEED.forEach(d => d.members.forEach(m => ids.add(m.id)));
+  (state.roster.added || []).forEach(a => { if (a && a.id) ids.add(a.id); });
+  return ids;
+}
+// Build a stable, unique id from department + name (accent-stripped slug).
+function genMemberId(deptId, name) {
+  const PREFIX = { management:'mgr', supervisors:'sup', laundry:'lnd', lobby:'lby',
+                   turndown:'td', overnight:'ovn', ra:'ra', houseperson:'hp' };
+  const prefix = PREFIX[deptId] || 'emp';
+  let slug = String(name || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // strip accents (José -> jose)
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!slug) slug = 'staff';
+  const known = staffKnownIds();
+  let base = `${prefix}_${slug}`, id = base, n = 2;
+  while (known.has(id)) { id = `${base}_${n}`; n++; }
+  return id;
+}
+
+function openStaffModal() {
+  const sel = document.getElementById('staff-add-dept');
+  sel.innerHTML = DEPARTMENTS_SEED.map(d => `<option value="${d.id}">${staffHtml(d.label)}</option>`).join('');
+  document.getElementById('staff-add-name').value = '';
+  document.getElementById('staff-add-date').value = '';
+  renderStaffList();
+  document.getElementById('staff-modal').style.display = 'flex';
+}
+function closeStaffModal() {
+  document.getElementById('staff-modal').style.display = 'none';
+  render();   // reflect roster changes in the main grid
+}
+function onStaffOverlayClick(e) {
+  if (e.target.id === 'staff-modal') closeStaffModal();
+}
+
+function renderStaffList() {
+  rebuildRoster();
+  document.getElementById('staff-list').innerHTML = DEPARTMENTS.map(dept => `
+    <div class="staff-dept">${staffHtml(dept.label)}</div>
+    ${orderedMembers(dept).map(m => `
+      <div class="staff-row">
+        <input class="staff-name" type="text" value="${staffHtml(m.name)}"
+          onchange="renameEmployee('${m.id}', this.value)">
+        ${canRemoveStaff(m.id)
+          ? `<button class="staff-x" title="Remove" onclick="removeEmployee('${m.id}')">✕</button>`
+          : `<span class="staff-lock" title="Part of fixed coverage rules — can't be removed">🔒</span>`}
+      </div>
+    `).join('')}
+  `).join('');
+
+  const removed = (state.roster.removed || []).filter(id => SEED_INDEX[id]);
+  const box = document.getElementById('staff-removed');
+  if (removed.length) {
+    box.style.display = 'block';
+    box.innerHTML = `<div class="staff-dept">Removed</div>` + removed.map(id => `
+      <div class="staff-row">
+        <span class="staff-removed-name">${staffHtml(SEED_INDEX[id].name)} <em>· ${staffHtml(SEED_INDEX[id].deptLabel)}</em></span>
+        <button class="staff-restore" onclick="restoreEmployee('${id}')">Restore</button>
+      </div>
+    `).join('');
+  } else {
+    box.style.display = 'none';
+    box.innerHTML = '';
+  }
+}
+
+function addEmployee() {
+  const deptId  = document.getElementById('staff-add-dept').value;
+  const nameInp = document.getElementById('staff-add-name');
+  const dateInp = document.getElementById('staff-add-date');
+  const name = (nameInp.value || '').trim();
+  if (!name)   { toast('Enter a name first'); nameInp.focus(); return; }
+  if (!deptId) { toast('Pick a department'); return; }
+  const id = genMemberId(deptId, name);
+  if (!Array.isArray(state.roster.added)) state.roster.added = [];
+  state.roster.added.push({ id, deptId, name });
+  if (dateInp.value) state.seniority[id] = dateInp.value;
+  saveState();
+  rebuildRoster();
+  nameInp.value = '';
+  dateInp.value = '';
+  renderStaffList();
+  render();
+  toast(`Added ${name}`);
+  nameInp.focus();
+}
+
+function renameEmployee(id, name) {
+  const v = (name || '').trim();
+  if (!state.roster.renamed) state.roster.renamed = {};
+  if (!v || v === staffOriginalName(id)) delete state.roster.renamed[id];
+  else state.roster.renamed[id] = v;
+  saveState();
+  rebuildRoster();
+  render();   // update main grid label; list input already shows the new value
+}
+
+function removeEmployee(id) {
+  if (!canRemoveStaff(id)) { toast("This person can't be removed"); return; }
+  const name = staffDisplayName(id);
+  if (!confirm(`Remove ${name} from the roster?`)) return;
+  const added = Array.isArray(state.roster.added) ? state.roster.added : [];
+  const idx = added.findIndex(a => a && a.id === id);
+  if (idx >= 0) {
+    // Added employee → hard delete: purge every trace.
+    added.splice(idx, 1);
+    if (state.roster.renamed) delete state.roster.renamed[id];
+    delete state.seniority[id];
+    for (let i = 0; i < 7; i++) delete state.schedule[`${id}_${i}`];
+  } else {
+    // Seed employee → soft hide: keep seniority/schedule so Restore is lossless.
+    if (!Array.isArray(state.roster.removed)) state.roster.removed = [];
+    if (!state.roster.removed.includes(id)) state.roster.removed.push(id);
+  }
+  saveState();
+  rebuildRoster();
+  renderStaffList();
+  render();
+  toast(`Removed ${name}`);
+}
+
+function restoreEmployee(id) {
+  state.roster.removed = (state.roster.removed || []).filter(x => x !== id);
+  saveState();
+  rebuildRoster();
+  renderStaffList();
+  render();
+  toast('Restored');
 }
 
 // ═══════════════════════════════════════════
