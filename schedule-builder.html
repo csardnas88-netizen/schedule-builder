@@ -925,6 +925,7 @@ body {
 .lib-tab:not(.active):hover{color:var(--navy)}
 .lib-view{display:none;padding:16px}
 .lib-view.active{display:block}
+#lib-view-capture{max-width:440px;margin-inline:auto}   /* keep the entry form phone-width on desktop */
 #lib-view-hkweek.active,#lib-view-calendar.active{display:flex;flex-direction:column;height:calc(100vh - 240px);min-height:460px;padding:12px 12px 8px}
 .lib-card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-md);margin-bottom:14px;overflow:hidden;border:1px solid var(--border)}
 .lib-card-head{background:var(--navy);color:#fff;padding:13px 18px;font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;letter-spacing:.2px}
@@ -946,13 +947,25 @@ body {
 .lib-day-chip.picked{background:var(--gold-pale);color:#8A6423;border-color:var(--gold-light);display:flex;align-items:center;gap:7px;font-weight:700}
 .lib-day-chip.picked .rm{cursor:pointer;font-weight:700;opacity:.55;font-size:13px;line-height:1;transition:opacity .15s}
 .lib-day-chip.picked .rm:hover{opacity:1}
-.lib-date-add-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
-.lib-date-add-row input{flex:1;padding:11px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Inter';font-size:12px;background:var(--cream);min-width:0;transition:border-color .15s}
-.lib-date-add-row input:focus{outline:none;border-color:var(--gold);background:#fff}
-.lib-date-add-sep{font-size:11px;color:var(--muted-2);flex-shrink:0}
-.lib-range-hint{font-size:10.5px;color:var(--muted-2);margin-bottom:10px;line-height:1.5}
-.lib-btn-add-day{padding:0 16px;border:1px solid var(--navy);border-radius:var(--radius-sm);background:var(--navy);color:#fff;font-family:'Inter';font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
-.lib-btn-add-day:hover{background:var(--navy-mid)}
+.lib-range-hint{font-size:10.5px;color:var(--muted-2);margin:6px 0 10px;line-height:1.5}
+.lib-cal2{border:1px solid var(--border);border-radius:var(--radius-md);background:#fff;padding:10px 10px 12px;margin-bottom:8px}
+.lib-cal2-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lib-cal2-title{font-size:12.5px;font-weight:800;color:var(--navy);letter-spacing:.2px}
+.lib-cal2-nav{width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--cream);color:var(--navy);font-size:16px;line-height:1;cursor:pointer;transition:all .15s}
+.lib-cal2-nav:hover{background:var(--gold-pale);border-color:var(--gold-light)}
+.lib-cal2-nav:disabled{opacity:.35;cursor:default}
+.lib-cal2-nav:disabled:hover{background:var(--cream);border-color:var(--border)}
+.lib-cal2-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+.lib-cal2-dow span{text-align:center;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-2)}
+.lib-cal2-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.lib-cal2-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text);border:1px solid transparent;border-radius:var(--radius-sm);cursor:pointer;transition:all .12s;user-select:none}
+.lib-cal2-cell:hover:not(.empty):not(.past){background:var(--gold-pale);border-color:var(--gold-light)}
+.lib-cal2-cell.empty{cursor:default}
+.lib-cal2-cell.we{background:var(--gold-pale)}
+.lib-cal2-cell.past{color:var(--muted-2);opacity:.4;cursor:not-allowed;text-decoration:line-through;background:none}
+.lib-cal2-cell.today{border-color:var(--navy);font-weight:800}
+.lib-cal2-cell.sel{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:800}
+.lib-cal2-cell.sel:hover{background:var(--gold);border-color:var(--gold)}
 .lib-emp-picker{position:relative}
 .lib-emp-picker input[type="text"]{width:100%;padding:11px 13px 11px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Inter';font-size:13px;background:var(--cream) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="%237A756B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 12px center}
 .lib-emp-picker input[type="text"]:focus{outline:none;border-color:var(--gold);background-color:#fff}
@@ -966,8 +979,6 @@ body {
 .lib-emp-list-item:last-child{border-bottom:none}
 .lib-emp-list-item:hover{background:var(--gold-pale)}
 .lib-emp-list-empty{padding:18px;text-align:center;font-size:12px;color:var(--muted-2)}
-.lib-date-range{display:flex;gap:8px}
-.lib-date-range input{flex:1}
 .lib-btn{width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--gold);color:#fff;font-family:'Inter';font-size:13px;font-weight:700;letter-spacing:.2px;cursor:pointer;margin-top:2px;transition:background .15s;box-shadow:var(--shadow-sm)}
 .lib-btn:hover{background:#A67934}
 .lib-meta-note{font-size:10.5px;color:var(--muted-2);margin-top:10px;text-align:center;line-height:1.6}
@@ -1080,7 +1091,7 @@ body {
   <!-- SIDEBAR NAVIGATION -->
   <nav class="sidebar" id="sidebar">
     <button class="nav-item active" data-view="semana" onclick="switchView('semana')">
-      <span class="nav-ico">🗓</span><span class="nav-lbl">Week</span>
+      <span class="nav-ico">🗓</span><span class="nav-lbl">Schedule</span>
     </button>
     <button class="nav-item" data-view="libreta" onclick="switchView('libreta')">
       <span class="nav-ico">📓</span><span class="nav-lbl">Notebook</span>
@@ -1179,22 +1190,18 @@ body {
               </div>
             </div>
             <div class="lib-field" id="lib-days-field">
-              <label>Requested day(s) — any future date</label>
-              <div class="lib-date-add-row">
-                <input type="date" id="lib-day-picker" title="From">
-                <span class="lib-date-add-sep">to</span>
-                <input type="date" id="lib-day-picker-end" title="To (optional)">
-                <button type="button" class="lib-btn-add-day" onclick="LB.addPickedDay()">＋ Add</button>
+              <label>Requested day(s) — tap to select</label>
+              <div class="lib-cal2" id="lib-cap-cal">
+                <div class="lib-cal2-head">
+                  <button type="button" class="lib-cal2-nav" onclick="LB.capCalNav(-1)">‹</button>
+                  <div class="lib-cal2-title" id="lib-cap-cal-title">Month</div>
+                  <button type="button" class="lib-cal2-nav" onclick="LB.capCalNav(1)">›</button>
+                </div>
+                <div class="lib-cal2-dow"><span>Sat</span><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></div>
+                <div class="lib-cal2-grid" id="lib-cap-cal-grid"></div>
               </div>
-              <p class="lib-range-hint">Leave "to" empty for a single day, or fill it to add several consecutive days at once.</p>
+              <p class="lib-range-hint" id="lib-vac-hint" style="display:none">Vacation: tap the first day, then the last day — the whole range fills in.</p>
               <div class="lib-day-chips" id="lib-picked-days"></div>
-            </div>
-            <div class="lib-field" id="lib-range-field" style="display:none">
-              <label>Date range</label>
-              <div class="lib-date-range">
-                <input type="date" id="lib-vac-start">
-                <input type="date" id="lib-vac-end">
-              </div>
             </div>
             <div class="lib-capture-alerts" id="lib-capture-alerts"></div>
             <button class="lib-btn" onclick="LB.submitEntry()">Save request</button>
@@ -3453,6 +3460,7 @@ init();
   let pickedDates = [];
   let hkWeekStart = null;
   let calYear, calMonth;
+  let capCalY, capCalM;       // month shown in the capture-card tap calendar
   let sheetIso = null;
   let confirmArmed = false;   // set true when the manager overrides a cascade conflict
 
@@ -3548,15 +3556,7 @@ init();
     return out;
   }
   // The dates the form would currently submit (picked days, or the vac range).
-  function currentDates(){
-    if (selectedType === 'vac'){
-      const s = $('lib-vac-start') && $('lib-vac-start').value;
-      const e = $('lib-vac-end') && $('lib-vac-end').value;
-      if (!s || !e || new Date(e) < new Date(s)) return [];
-      return rangeDates(s, e);
-    }
-    return [...pickedDates];
-  }
+  function currentDates(){ return [...pickedDates]; }
   // 4.1 · bidirectional cascade — the OTHER side of a cover pair already off.
   function cascadeConflicts(name, dept, dates){
     const myId = empIdOf(name, dept);
@@ -3737,7 +3737,7 @@ init();
     const q = $('lib-emp-search').value.trim().toLowerCase();
     const matches = ROSTER.filter(e => e.name.toLowerCase().includes(q));
     const el = $('lib-emp-list');
-    if (!matches.length){ el.innerHTML = '<div class="lib-emp-list-empty">Sin resultados</div>'; return; }
+    if (!matches.length){ el.innerHTML = '<div class="lib-emp-list-empty">No results</div>'; return; }
     const groups = {};
     matches.forEach(e => { (groups[e.dept] = groups[e.dept] || []).push(e); });
     let html = '';
@@ -3774,30 +3774,62 @@ init();
         document.querySelectorAll('#view-libreta .lib-type-chip').forEach(x => x.classList.remove('active'));
         c.classList.add('active');
         selectedType = c.dataset.type;
-        const isVac = selectedType === 'vac';
-        $('lib-days-field').style.display = isVac ? 'none' : 'block';
-        $('lib-range-field').style.display = isVac ? 'block' : 'none';
+        const hint = $('lib-vac-hint'); if (hint) hint.style.display = selectedType === 'vac' ? 'block' : 'none';
+        pickedDates = [];           // single-tap vs range differ — start clean on switch
+        renderCapCal(); renderPickedDays();
         refreshCaptureAlerts();
       });
     });
   }
 
-  // ── Multi / non-consecutive date capture ──
-  function addPickedDay(){
-    const start = $('lib-day-picker').value;
-    const endInput = $('lib-day-picker-end').value;
-    if (!start){ say('Select at least the "From" date'); return; }
-    const end = endInput || start;
-    if (new Date(end) < new Date(start)){ say('"To" cannot be before "From"'); return; }
-    const newDates = rangeDates(start, end).filter(d => !pickedDates.includes(d));
-    if (!newDates.length){ say('Those days are already added'); return; }
-    pickedDates.push(...newDates); pickedDates.sort();
-    renderPickedDays();
-    $('lib-day-picker').value = ''; $('lib-day-picker-end').value = '';
-    if (newDates.length > 1) say(`${newDates.length} days added at once`);
-    refreshCaptureAlerts();
+  // ── Inline tap calendar (Sat-first, weekends gold, past disabled) ──
+  function capCalNav(delta){
+    const d = new Date(capCalY, capCalM + delta, 1);
+    const now = new Date(), floor = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (d < floor) return;                         // never page into a fully-past month
+    capCalY = d.getFullYear(); capCalM = d.getMonth();
+    renderCapCal();
   }
-  function removePickedDay(iso){ pickedDates = pickedDates.filter(d => d !== iso); renderPickedDays(); refreshCaptureAlerts(); }
+  function renderCapCal(){
+    const grid = $('lib-cap-cal-grid'); if (!grid) return;
+    $('lib-cap-cal-title').textContent = `${MONTH_NAMES[capCalM]} ${capCalY}`;
+    const now = new Date(), t = todayIso();
+    const atFloor = (capCalY === now.getFullYear() && capCalM === now.getMonth());
+    const prev = document.querySelector('#lib-cap-cal .lib-cal2-nav'); if (prev) prev.disabled = atFloor;
+    const firstDow = (new Date(capCalY, capCalM, 1).getDay() + 1) % 7;   // Sat-first offset
+    const daysInMonth = new Date(capCalY, capCalM + 1, 0).getDate();
+    let cells = '';
+    for (let i = 0; i < firstDow; i++) cells += `<div class="lib-cal2-cell empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++){
+      const iso = `${capCalY}-${String(capCalM + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dow = new Date(capCalY, capCalM, day).getDay();
+      const cls = ['lib-cal2-cell'];
+      if (dow === 0 || dow === 6) cls.push('we');
+      const past = iso < t;
+      if (past) cls.push('past');
+      if (iso === t) cls.push('today');
+      if (pickedDates.includes(iso)) cls.push('sel');
+      const tap = past ? '' : ` onclick="LB.capCalTap('${iso}')"`;
+      cells += `<div class="${cls.join(' ')}"${tap}>${day}</div>`;
+    }
+    grid.innerHTML = cells;
+  }
+  function capCalTap(iso){
+    if (iso < todayIso()) return;
+    if (selectedType === 'vac'){
+      if (pickedDates.length === 1){
+        const a = pickedDates[0];
+        pickedDates = a <= iso ? rangeDates(a, iso) : rangeDates(iso, a);
+      } else {
+        pickedDates = [iso];                       // (re)anchor the range on a fresh tap
+      }
+    } else {
+      if (pickedDates.includes(iso)) pickedDates = pickedDates.filter(d => d !== iso);
+      else { pickedDates.push(iso); pickedDates.sort(); }
+    }
+    renderCapCal(); renderPickedDays(); refreshCaptureAlerts();
+  }
+  function removePickedDay(iso){ pickedDates = pickedDates.filter(d => d !== iso); renderCapCal(); renderPickedDays(); refreshCaptureAlerts(); }
   function renderPickedDays(){
     const el = $('lib-picked-days'); if (!el) return;
     el.innerHTML = pickedDates.map(iso => {
@@ -3811,16 +3843,8 @@ init();
     const armed = confirmArmed; confirmArmed = false;   // override lasts one call only
     if (!selectedName){ say('Search and select an employee'); return; }
     if (!hasDB()){ say('Offline — try again'); return; }
-    let dates;
-    if (selectedType === 'vac'){
-      const s = $('lib-vac-start').value, e = $('lib-vac-end').value;
-      if (!s || !e){ say('Select the date range'); return; }
-      if (new Date(e) < new Date(s)){ say('The end cannot be before the start'); return; }
-      dates = rangeDates(s, e);
-    } else {
-      if (!pickedDates.length){ say('Add at least one day'); return; }
-      dates = [...pickedDates];
-    }
+    if (!pickedDates.length){ say('Tap at least one day on the calendar'); return; }
+    const dates = [...pickedDates];
     // 4.1 · a cover-cascade conflict blocks until the manager confirms override.
     if (!armed && cascadeConflicts(selectedName, selectedDept, dates).length){ showConfirmGate(); return; }
     await performInsert(dates);
@@ -3851,8 +3875,7 @@ init();
       const { error } = await sbClient.from('notebook_requests').insert(row);
       if (error) throw error;
     } catch (e) { console.warn('[libreta] insert failed:', e.message || e); say('Error saving the request'); return; }
-    pickedDates = []; renderPickedDays();
-    if (selectedType === 'vac'){ $('lib-vac-start').value = ''; $('lib-vac-end').value = ''; }
+    pickedDates = []; renderCapCal(); renderPickedDays();
     clearEmp();
     const box = $('lib-capture-alerts'); if (box){ box.innerHTML = ''; box.classList.remove('show'); }
     say('Request saved — visible to all 4 instantly');
@@ -3983,13 +4006,14 @@ init();
     if (!$('view-libreta')) return;
     wireTabs();
     wireTypeChips();
-    ['lib-vac-start','lib-vac-end'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', refreshCaptureAlerts); });
     document.addEventListener('click', e => {
       if (!e.target.closest('.lib-emp-picker')){ const l = $('lib-emp-list'); if (l) l.classList.remove('show'); }
     });
     try { hkWeekStart = saturdayOf((typeof state !== 'undefined' && state && state.weekStart) ? state.weekStart : todayIso()); }
     catch (e) { hkWeekStart = recentSaturday(); }
     const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+    capCalY = now.getFullYear(); capCalM = now.getMonth();
+    renderCapCal();
     renderPickedDays();
     loadEntries();
     subscribeRealtime();
@@ -3998,7 +4022,7 @@ init();
   // Only handlers referenced by inline onclick/oninput/onfocus are exported.
   window.LB = {
     filterEmpList, showEmpList, selectEmp, clearEmp,
-    addPickedDay, removePickedDay, submitEntry,
+    capCalNav, capCalTap, removePickedDay, submitEntry,
     confirmSubmit, cancelSubmit,
     shiftHkWeek, shiftMonth, openDaySheet, closeSheet,
     syncSchedule,
