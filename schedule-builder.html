@@ -1012,6 +1012,14 @@ body {
 .lib-status-pending{background:#FBF1DD;color:#93701C}
 .lib-status-granted{background:var(--green-pale);color:var(--green)}
 .lib-status-denied{background:var(--red-pale);color:var(--red)}
+.lib-entry-actions{display:flex;gap:8px;margin-top:11px}
+.lib-entry-act{flex:0 0 auto;padding:7px 15px;border-radius:var(--radius-sm);font-family:'Inter';font-size:11px;font-weight:700;letter-spacing:.2px;cursor:pointer;background:#fff;transition:all .15s}
+.lib-entry-act.edit{border:1px solid var(--navy);color:var(--navy)}
+.lib-entry-act.edit:hover{background:var(--navy);color:#fff}
+.lib-entry-act.del{border:1px solid var(--red);color:var(--red)}
+.lib-entry-act.del:hover{background:var(--red);color:#fff}
+.lib-btn-cancel-edit{width:100%;padding:11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-family:'Inter';font-size:12.5px;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s}
+.lib-btn-cancel-edit:hover{border-color:var(--muted-2);color:var(--text)}
 .lib-empty{text-align:center;padding:34px 16px;color:var(--muted-2);font-size:12.5px}
 .lib-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;flex-shrink:0}
 .lib-cal-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--navy);letter-spacing:.2px}
@@ -1171,7 +1179,7 @@ body {
       <!-- SUB-VIEW: capture -->
       <div class="lib-view active" id="lib-view-capture">
         <div class="lib-card">
-          <div class="lib-card-head">Record request</div>
+          <div class="lib-card-head" id="lib-card-head">Record request</div>
           <div class="lib-card-body">
             <div class="lib-field">
               <label>Employee</label>
@@ -1204,7 +1212,8 @@ body {
               <div class="lib-day-chips" id="lib-picked-days"></div>
             </div>
             <div class="lib-capture-alerts" id="lib-capture-alerts"></div>
-            <button class="lib-btn" onclick="LB.submitEntry()">Save request</button>
+            <button class="lib-btn" id="lib-save-btn" onclick="LB.submitEntry()">Save request</button>
+            <button class="lib-btn-cancel-edit" id="lib-cancel-edit" style="display:none" onclick="LB.cancelEdit()">Cancel edit</button>
             <p class="lib-meta-note">Saved automatically: <b>who logged it</b> and <b>exact date/time</b> — no need to type it.</p>
           </div>
         </div>
@@ -3463,6 +3472,7 @@ init();
   let capCalY, capCalM;       // month shown in the capture-card tap calendar
   let sheetIso = null;
   let confirmArmed = false;   // set true when the manager overrides a cascade conflict
+  let editingId = null;       // row id being edited in the capture form (null = new request)
 
   const $ = id => document.getElementById(id);
 
@@ -3847,7 +3857,7 @@ init();
     const dates = [...pickedDates];
     // 4.1 · a cover-cascade conflict blocks until the manager confirms override.
     if (!armed && cascadeConflicts(selectedName, selectedDept, dates).length){ showConfirmGate(); return; }
-    await performInsert(dates);
+    if (editingId) await performUpdate(dates); else await performInsert(dates);
   }
   function showConfirmGate(){
     const box = $('lib-capture-alerts'); if (!box) return;
@@ -3882,6 +3892,74 @@ init();
     loadEntries();
   }
 
+  // ── Edit an existing request (reuses the capture form) ──
+  function setEditMode(on){
+    const head = $('lib-card-head'); if (head) head.textContent = on ? 'Edit request' : 'Record request';
+    const btn  = $('lib-save-btn');  if (btn)  btn.textContent  = on ? 'Update request' : 'Save request';
+    const cx   = $('lib-cancel-edit'); if (cx) cx.style.display = on ? 'block' : 'none';
+  }
+  function setType(t){
+    selectedType = t;
+    document.querySelectorAll('#view-libreta .lib-type-chip').forEach(x => x.classList.toggle('active', x.dataset.type === t));
+    const hint = $('lib-vac-hint'); if (hint) hint.style.display = t === 'vac' ? 'block' : 'none';
+  }
+  function startEdit(idStr){
+    const en = entries.find(e => String(e.id) === String(idStr)); if (!en) return;
+    editingId = en.id;
+    const tab = document.querySelector('#view-libreta .lib-tab[data-view="capture"]'); if (tab) tab.click();
+    selectEmp(en.name, en.dept);
+    setType(en.type);
+    pickedDates = [...(en.dates || [])].sort();
+    const first = pickedDates[0];
+    if (first){ const d = new Date(first + 'T12:00:00'); capCalY = d.getFullYear(); capCalM = d.getMonth(); }
+    renderCapCal(); renderPickedDays();
+    setEditMode(true);
+    refreshCaptureAlerts();
+    closeSheet();
+    const card = document.querySelector('#lib-view-capture .lib-card');
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function cancelEdit(){
+    editingId = null;
+    clearEmp();
+    pickedDates = []; renderCapCal(); renderPickedDays();
+    setType('roff');
+    setEditMode(false);
+    const box = $('lib-capture-alerts'); if (box){ box.innerHTML = ''; box.classList.remove('show'); }
+    refreshCaptureAlerts();
+  }
+  async function performUpdate(dates){
+    const patch = {
+      employee_name: selectedName, employee_dept: selectedDept, request_type: selectedType,
+      dates, status: 'pending', decided_by: null, decided_at: null,
+    };
+    try {
+      const { error } = await sbClient.from('notebook_requests').update(patch).eq('id', editingId);
+      if (error) throw error;
+    } catch (e) { console.warn('[libreta] update failed:', e.message || e); say('Error updating the request'); return; }
+    editingId = null;
+    pickedDates = []; renderCapCal(); renderPickedDays();
+    clearEmp();
+    setType('roff');
+    setEditMode(false);
+    const box = $('lib-capture-alerts'); if (box){ box.innerHTML = ''; box.classList.remove('show'); }
+    say('Request updated — visible to all 4 instantly');
+    loadEntries();
+  }
+  async function deleteEntry(idStr){
+    const en = entries.find(e => String(e.id) === String(idStr)); if (!en) return;
+    if (!hasDB()){ say('Offline — try again'); return; }
+    const label = `${en.name} · ${typeAbbrev(en.type)} · ${rangeLabel(en.dates)}`;
+    if (!confirm(`Delete this request?\n\n${label}\n\nThis can't be undone.`)) return;
+    try {
+      const { error } = await sbClient.from('notebook_requests').delete().eq('id', en.id);
+      if (error) throw error;
+    } catch (e) { console.warn('[libreta] delete failed:', e.message || e); say('Error deleting the request'); return; }
+    if (editingId && String(editingId) === String(en.id)) cancelEdit();
+    say('Request deleted');
+    loadEntries();
+  }
+
   // ── Entry card (rendered in the day-detail sheet) ──
   function entryCard(en){
     const daysTxt = en.type === 'vac' ? rangeLabel(en.dates) : en.dates.map(fmtDate).join(', ');
@@ -3897,6 +3975,10 @@ init();
         <div class="lib-entry-days">${esc(daysTxt)}</div>
         <div class="lib-entry-meta"><span>${esc(en.capturedBy)}</span><span class="sep">·</span><span>${esc(en.capturedAt)}</span></div>
         ${statusHtml}
+        <div class="lib-entry-actions">
+          <button type="button" class="lib-entry-act edit" onclick="LB.startEdit('${esc(en.id)}')">Edit</button>
+          <button type="button" class="lib-entry-act del" onclick="LB.deleteEntry('${esc(en.id)}')">Delete</button>
+        </div>
       </div>
     </div>`;
   }
@@ -4026,6 +4108,7 @@ init();
     confirmSubmit, cancelSubmit,
     shiftHkWeek, shiftMonth, openDaySheet, closeSheet,
     syncSchedule,
+    startEdit, deleteEntry, cancelEdit,
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
