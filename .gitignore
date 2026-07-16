@@ -13,4 +13,5 @@
 
 # ...except the app itself and this ignore file
 !schedule-builder.html
+!index.html
 !.gitignore
