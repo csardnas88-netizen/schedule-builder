@@ -1042,6 +1042,9 @@ body {
 .lib-hk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;flex:1;min-height:0}
 .lib-hk-day{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:9px 5px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);transition:box-shadow .15s;min-height:0}
 .lib-hk-day.today{border-color:var(--gold);border-width:1.5px}
+.lib-hk-day.tappable{cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s}
+.lib-hk-day.tappable:hover{box-shadow:var(--shadow-md);border-color:var(--gold)}
+.lib-hk-day.tappable:active{transform:scale(.98)}
 .lib-hk-day-head{text-align:center;margin-bottom:7px;flex-shrink:0;padding-bottom:6px;border-bottom:1px solid var(--cream-dark)}
 .lib-hk-day-name{font-size:9px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.4px}
 .lib-hk-day-num{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:700;color:var(--navy);line-height:1.15;margin-top:1px}
@@ -4010,11 +4013,14 @@ init();
     for (let i = 0; i < 7; i++){
       const d = new Date(start); d.setDate(start.getDate() + i);
       const iso = isoOf(d);
-      const tags = entriesForDate(iso).map(e => {
+      const dayEntries = entriesForDate(iso);
+      const tags = dayEntries.map(e => {
         const n = firstName(e.name);
         return `<div class="lib-hk-tag ${e.type}"><span class="nm" style="font-size:${nameFontSize(n)}px">${esc(n)}</span><span class="tp">${typeAbbrev(e.type)}</span></div>`;
       }).join('');
-      html += `<div class="lib-hk-day ${iso === t ? 'today' : ''}">
+      const tappable = dayEntries.length > 0;   // only days with requests open the day sheet (edit/delete)
+      const clickAttr = tappable ? ` onclick="LB.openDaySheet('${iso}')"` : '';
+      html += `<div class="lib-hk-day ${iso === t ? 'today' : ''}${tappable ? ' tappable' : ''}"${clickAttr}>
         <div class="lib-hk-day-head"><div class="lib-hk-day-name">${HK_DAYS[i]}</div><div class="lib-hk-day-num">${d.getDate()}</div></div>
         <div class="lib-hk-day-entries">${tags || '<div class="lib-hk-day-empty">—</div>'}</div>
       </div>`;
