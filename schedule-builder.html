@@ -2877,6 +2877,16 @@ function autoFill() {
   const needs = computeNeeds();
   clearAutoFillCells();
 
+  // Place the notebook's granted days off BEFORE anything is scheduled, so they
+  // act as constraints the generators build around: scheduleDept seeds each
+  // person's off set from isFixedOff(), which reads R-OFF/VAC straight off the
+  // grid. Running this afterwards (as it used to) silently dropped every grant
+  // that landed on a filled cell — syncSchedule only writes where the cell is
+  // empty — and still reported the request as granted, so people were scheduled
+  // to work days they had been given off. Its grid pass is synchronous; only the
+  // status write-back awaits, so there is nothing to wait for here.
+  libSyncSchedule();
+
   // Base departments (alias + special people excluded, handled afterward).
   scheduleDept('supervisors', deptMemberIds('supervisors', []),                        needs.sup, 2);
   scheduleDept('laundry',     deptMemberIds('laundry', ['lnd_jorge', 'lnd_susan']),    needs.laundry, 2);
@@ -2895,7 +2905,9 @@ function autoFill() {
 
   saveState();
   render();
-  libSyncSchedule();     // re-assert notebook grants on top of the fresh auto-fill
+  // No second libSyncSchedule() here: the grants are already placed above, and a
+  // re-run would re-judge each one's capacity gate against the now-full grid,
+  // which can flip a granted request to pending.
   toast('Schedule generated automatically');
 }
 
