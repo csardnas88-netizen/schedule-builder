@@ -1584,7 +1584,43 @@ let state = {
   hpBackup:         {}, // { `${empId}_${dayIdx}`: true } RA pulled to houseperson backup
   libCells:         {}, // { `${empId}_${dayIdx}`: 'R-OFF'|'FLEX'|'VAC' } cells the Libreta grant-sync wrote for the loaded week (so it can reconcile idempotently)
   roster: { added: [], renamed: {}, removed: [] }, // Staff editor overlay on DEPARTMENTS_SEED: added:[{id,deptId,name}] · renamed:{id:name} · removed:[id]
+  archive:          {}, // { weekStart: { schedule, rooms, dueouts, hpBackup, libCells, savedAt } } past weeks — see snapshotWeek()
 };
+
+// ── WEEK ARCHIVE ──────────────────────────────────────────────
+// The live week is stored flat (schedule/hpBackup/libCells keyed only by
+// `${empId}_${dayIdx}`, rooms/dueouts by day index), so it is overwritten the
+// moment weekStart moves. The archive holds a per-week copy so past weeks
+// survive. It rides the Supabase sync for free: pushState sends the whole
+// state object and pullState spreads it back.
+const ARCHIVE_MAX_WEEKS = 52;   // ~537 KB at this roster size; localStorage caps near 5 MB
+
+// Copy the loaded week's cells into the archive. Callers switching weeks must
+// pass the OUTGOING weekStart explicitly and call this BEFORE clearing —
+// defaulting to state.weekStart after it moves would file the cells under the
+// wrong week.
+function snapshotWeek(weekStart) {
+  const wk = weekStart || state.weekStart;
+  if (!wk) return;
+  if (!state.archive) state.archive = {};
+  state.archive[wk] = {
+    schedule: { ...state.schedule },
+    rooms:    [...state.rooms],
+    dueouts:  [...state.dueouts],
+    hpBackup: { ...(state.hpBackup || {}) },
+    libCells: { ...(state.libCells || {}) },
+    savedAt:  new Date().toISOString(),
+  };
+  pruneArchive();
+}
+
+// weekStart is 'YYYY-MM-DD', so a plain string sort is chronological.
+function pruneArchive() {
+  const weeks = Object.keys(state.archive || {}).sort();
+  if (weeks.length <= ARCHIVE_MAX_WEEKS) return;
+  weeks.slice(0, weeks.length - ARCHIVE_MAX_WEEKS)
+       .forEach(w => delete state.archive[w]);
+}
 
 function loadState() {
   try {
@@ -1594,6 +1630,7 @@ function loadState() {
   rebuildRoster();   // apply the saved Staff-editor overlay before first render
 }
 function saveState() {
+  snapshotWeek();   // keep the archive's copy of the loaded week current
   try { localStorage.setItem('jwm_schedule_v1', JSON.stringify(state)); } catch(e) {}
   schedulePush();
 }
@@ -2118,6 +2155,9 @@ function onWeekChange() {
   if (prevWeekStart && prevWeekStart !== newWeekStart) {
     const ok = confirm('Start the week blank? Rooms sold, due-outs, and the schedule will be cleared (R-OFF/vacation/flex will be kept).');
     if (!ok) { input.value = prevWeekStart; return; }
+    // Must run before the clears below: saveState() at the end of this function
+    // would otherwise archive the new blank week and lose the outgoing one.
+    snapshotWeek(prevWeekStart);
     state.rooms   = [0,0,0,0,0,0,0];
     state.dueouts = [0,0,0,0,0,0,0];
     clearAutoFillCells();   // clears schedule + hpBackup; keeps R-OFF/VAC/FLEX
