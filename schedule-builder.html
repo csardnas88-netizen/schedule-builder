@@ -1622,6 +1622,26 @@ function pruneArchive() {
        .forEach(w => delete state.archive[w]);
 }
 
+// saveState() snapshots on every save, so merely visiting a week leaves a blank
+// entry behind. Those must not be offered as something to restore.
+function archivedWeek(weekStart) {
+  const snap = (state.archive || {})[weekStart];
+  if (!snap) return null;
+  const hasCells = Object.keys(snap.schedule || {}).length > 0;
+  const hasRooms = (snap.rooms || []).some(r => r > 0);
+  return (hasCells || hasRooms) ? snap : null;
+}
+
+// Load an archived week back into the live cells. Copies rather than aliases —
+// sharing the objects would let later edits mutate the archive in place.
+function restoreWeek(snap) {
+  state.schedule = { ...snap.schedule };
+  state.rooms    = [...snap.rooms];
+  state.dueouts  = [...snap.dueouts];
+  state.hpBackup = { ...(snap.hpBackup || {}) };
+  state.libCells = { ...(snap.libCells || {}) };
+}
+
 function loadState() {
   try {
     const s = localStorage.getItem('jwm_schedule_v1');
@@ -2147,20 +2167,31 @@ function onWeekChange() {
   }
   const newWeekStart = input.value;
 
-  // Nothing here is stored per calendar week (rooms/due-outs/schedule are all
-  // flat, keyed only by day-index or empId_dayIdx) — so switching to a
-  // genuinely different week would otherwise silently carry over the old
-  // week's room counts, due-outs, and full shift schedule with zero warning.
+  // The live cells are flat (rooms/due-outs by day-index, schedule by
+  // empId_dayIdx), so they mean nothing on their own — switching weeks would
+  // silently carry the old week's counts and shifts over. Either restore what
+  // that week held or start it clean, and archive the outgoing week either way.
   // Ask first; cancelling leaves everything untouched, including the picker.
   if (prevWeekStart && prevWeekStart !== newWeekStart) {
-    const ok = confirm('Start the week blank? Rooms sold, due-outs, and the schedule will be cleared (R-OFF/vacation/flex will be kept).');
+    const saved = archivedWeek(newWeekStart);
+    const when  = saved
+      ? new Date(saved.savedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+      : '';
+    const ok = confirm(saved
+      ? `Load the saved schedule for this week (last saved ${when})? The week you are leaving is saved first.`
+      : 'Start the week blank? Rooms sold, due-outs, and the schedule will be cleared (R-OFF/vacation/flex will be kept).');
     if (!ok) { input.value = prevWeekStart; return; }
-    // Must run before the clears below: saveState() at the end of this function
-    // would otherwise archive the new blank week and lose the outgoing one.
+    // Must run before the mutations below: saveState() at the end of this
+    // function would otherwise archive the incoming week's cells under the
+    // outgoing week, losing it.
     snapshotWeek(prevWeekStart);
-    state.rooms   = [0,0,0,0,0,0,0];
-    state.dueouts = [0,0,0,0,0,0,0];
-    clearAutoFillCells();   // clears schedule + hpBackup; keeps R-OFF/VAC/FLEX
+    if (saved) {
+      restoreWeek(saved);
+    } else {
+      state.rooms   = [0,0,0,0,0,0,0];
+      state.dueouts = [0,0,0,0,0,0,0];
+      clearAutoFillCells();   // clears schedule + hpBackup; keeps R-OFF/VAC/FLEX
+    }
   }
 
   state.weekStart = newWeekStart;
