@@ -2282,6 +2282,12 @@ const ID_ALIASES = {
   ra_gabriela_c: ['lby_gabriela'], lby_gabriela: ['ra_gabriela_c'],
   td_andrea:     ['lby_andrea'],   lby_andrea:   ['td_andrea'],
   hp_jorge_g:    ['lnd_jorge'],    lnd_jorge:    ['hp_jorge_g'],
+  // Susan is a supervisor who also works laundry. Unlike the three above she
+  // has no ALIAS_PEOPLE entry: her laundry shifts are assigned by hand, not by
+  // a cover cascade, so autoFill skips lnd_susan entirely. She still needs the
+  // pairing here or a day off on one row would leave the other row counting
+  // her as available.
+  sup_susan_a:   ['lnd_susan'],    lnd_susan:    ['sup_susan_a'],
 };
 function aliasesFor(id) { return [id, ...(ID_ALIASES[id] || [])]; }
 
@@ -2873,7 +2879,7 @@ function autoFill() {
 
   // Base departments (alias + special people excluded, handled afterward).
   scheduleDept('supervisors', deptMemberIds('supervisors', []),                        needs.sup, 2);
-  scheduleDept('laundry',     deptMemberIds('laundry', ['lnd_jorge']),                 needs.laundry, 2);
+  scheduleDept('laundry',     deptMemberIds('laundry', ['lnd_jorge', 'lnd_susan']),    needs.laundry, 2);
   scheduleDept('ra',          deptMemberIds('ra', ['ra_gabriela_c']),                  needs.ra, 2);
   scheduleDept('houseperson', deptMemberIds('houseperson', ['hp_jorge_g']),           needs.hp, 2);
   scheduleDept('turndown',    deptMemberIds('turndown', ['td_andrea', 'td_yesenia_p']), needs.td, 1);
